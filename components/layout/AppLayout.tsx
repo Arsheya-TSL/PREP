@@ -5,6 +5,7 @@ import { PanelLeft, PanelLeftClose } from "lucide-react"
 import { Button } from "../ui/button"
 import { useLayoutState } from "../../hooks/useLayoutState"
 import { useDashboardStore } from "../../components/pages/DashboardPage"
+import { PageType } from "../../lib/types"
 import AppSidebar from "./AppSidebar"
 import AppHeader from "./AppHeader"
 
@@ -12,8 +13,8 @@ type SidebarMode = 'expanded' | 'collapsed' | 'hidden'
 
 interface AppLayoutProps {
   children: React.ReactNode
-  activeTab: string
-  setActiveTab: (tab: string) => void
+  activeTab: PageType
+  setActiveTab: (tab: PageType) => void
 }
 
 export default function AppLayout({ children, activeTab, setActiveTab }: AppLayoutProps) {
