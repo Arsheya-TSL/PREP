@@ -2,7 +2,7 @@
 
 export type WorldClockConfig = {
   cities: Array<{ label: string; tz: string }>;
-  format: 'HH:mm' | 'hh:mm A' | 'HH:mm:ss';
+  format: 'HH:mm' | 'hh:mm A' | 'HH:mm:ss' | 'hh:mm:ss A';
   showDate: boolean;
   showBadges: boolean; // day/night
   tickMs: number; // default 1000

@@ -178,7 +178,7 @@ export function parseWidgetIntent(text: string): ParsedWidgetIntent {
     const size = determineSize(lowerText, viz, groupBy)
     
     // 7. Extract additional filters
-    const filters = extractFilters(lowerText, source, dateFilter)
+    const filters = extractFilters(lowerText, source, dateFilter || undefined)
     
     // 8. Generate name
     const name = generateWidgetName(lowerText, source, viz, groupBy)

@@ -911,7 +911,7 @@ function BudgetVsSpend({ size }: { size: WidgetSize }) {
         <div className="h-32 md:h-40 bg-neutral-50 rounded-lg border border-neutral-200 flex items-center justify-center">
           <div className="w-full h-full px-4">
             <ResponsiveContainer width="100%" height="100%">
-              {viz === 'area' && (
+              {viz === 'area' ? (
                 <AreaChart data={monthlyData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="budgetG" x1="0" y1="0" x2="0" y2="1">
@@ -930,8 +930,7 @@ function BudgetVsSpend({ size }: { size: WidgetSize }) {
                   <Area type="monotone" dataKey="budget" stroke="#3b82f6" fill="url(#budgetG)" strokeWidth={2} />
                   <Area type="monotone" dataKey="spent" stroke="#10b981" fill="url(#spentG)" strokeWidth={2} />
                 </AreaChart>
-              )}
-              {viz === 'line' && (
+              ) : viz === 'line' ? (
                 <LineChart data={monthlyData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="month" stroke="#64748b" fontSize={10} />
@@ -940,8 +939,7 @@ function BudgetVsSpend({ size }: { size: WidgetSize }) {
                   <Line type="monotone" dataKey="budget" stroke="#3b82f6" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey="spent" stroke="#10b981" strokeWidth={2} dot={false} />
                 </LineChart>
-              )}
-              {viz === 'bar' && (
+              ) : (
                 <BarChart data={monthlyData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="month" stroke="#64748b" fontSize={10} />

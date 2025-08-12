@@ -69,7 +69,7 @@ function extractCities(text: string): string[] {
   }
   
   console.log('Final extracted cities:', cities);
-  return [...new Set(cities)]; // Remove duplicates
+  return cities.filter((city, index) => cities.indexOf(city) === index); // Remove duplicates
 }
 
 // Parse clock intent
@@ -85,7 +85,7 @@ function parseClockIntent(text: string): UtilityWidgetDef {
   ];
   
   // Determine format
-  let format: 'HH:mm' | 'hh:mm A' | 'HH:mm:ss' = 'HH:mm';
+  let format: 'HH:mm' | 'hh:mm A' | 'HH:mm:ss' | 'hh:mm:ss A' = 'HH:mm';
   if (fuzzyMatch(text, TIME_FORMAT_HINTS['12h'])) {
     format = 'hh:mm A';
   }

@@ -15,6 +15,11 @@ interface WeatherData {
     weather_code: number;
     time: string;
   };
+  current_weather?: {
+    temperature: number;
+    weathercode: number;
+    time: string;
+  };
   daily?: {
     time: string[];
     temperature_2m_max: number[];
@@ -25,6 +30,7 @@ interface WeatherData {
     time: string[];
     temperature_2m: number[];
     precipitation: number[];
+    weathercode?: number[];
   };
 }
 

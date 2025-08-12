@@ -1,4 +1,4 @@
-import { useDrag, useDrop } from 'react-dnd'
+import { useDrag, useDrop, ConnectDragSource } from 'react-dnd'
 import { GripVertical, Maximize2, Minimize2 } from "lucide-react"
 import { Widget, DragItem, WidgetSize } from "../../lib/types"
 import { getGridSpan, getWidgetHeight, getTransitionClasses, snapToGrid } from "../../lib/utils"
@@ -107,7 +107,7 @@ export default function DraggableWidget({
           <>
             {/* Drag Handle */}
             <div 
-              ref={drag}
+              ref={drag as unknown as React.LegacyRef<HTMLDivElement>}
               className="absolute top-2 left-2 z-30 bg-white/90 backdrop-blur-sm rounded-lg p-1.5 shadow-lg border border-border cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <GripVertical className="h-3 w-3 text-muted-foreground" />

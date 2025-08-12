@@ -1,10 +1,10 @@
-import { PageType, WidgetSize, ITTFormData, ProjectFormData, ActiveITT } from './types'
+import { PageType, WidgetSize, ITTFormData, ProjectFormData, ActiveITT, Widget } from './types'
 import { projects } from './constants'
 import { defaultITTFormData, defaultProjectFormData } from './defaultFormData'
 
 export const createAppHandlers = (
   activeTab: PageType,
-  setWidgets: (fn: (prev: any) => any) => void,
+  setWidgets: (fn: (prev: Widget[]) => Widget[]) => void,
   setIttFormData: (data: ITTFormData | ((prev: ITTFormData) => ITTFormData)) => void,
   setProjectFormData: (data: ProjectFormData | ((prev: ProjectFormData) => ProjectFormData)) => void,
   setShowCreateITT: (show: boolean) => void,
@@ -22,17 +22,17 @@ export const createAppHandlers = (
   }
 
   const toggleWidget = (widgetId: string) => {
-    setWidgets(prev => prev.map(w => w.id === widgetId ? { ...w, enabled: !w.enabled } : w))
+    setWidgets(prev => prev.map((w: Widget) => w.id === widgetId ? { ...w, enabled: !w.enabled } : w))
   }
 
   const updateWidgetSize = (widgetId: string, size: WidgetSize) => {
-    setWidgets(prev => prev.map(w => w.id === widgetId ? { ...w, size } : w))
+    setWidgets(prev => prev.map((w: Widget) => w.id === widgetId ? { ...w, size } : w))
   }
 
   // Enhanced drag & drop with grid snapping
   const moveWidget = (dragIndex: number, dropIndex: number) => {
     setWidgets(prev => {
-      const pageWidgets = prev.filter(w => w.enabled && w.pages.includes(activeTab)).sort((a, b) => a.order - b.order)
+      const pageWidgets = prev.filter((w: Widget) => w.enabled && w.pages.includes(activeTab)).sort((a, b) => a.order - b.order)
       const newPageWidgets = [...pageWidgets]
       const draggedWidget = newPageWidgets[dragIndex]
       
@@ -44,7 +44,7 @@ export const createAppHandlers = (
         order: index + 1
       }))
       
-      const otherWidgets = prev.filter(w => !w.enabled || !w.pages.includes(activeTab))
+      const otherWidgets = prev.filter((w: Widget) => !w.enabled || !w.pages.includes(activeTab))
       
       return [...updatedWidgets, ...otherWidgets]
     })

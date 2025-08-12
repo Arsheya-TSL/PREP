@@ -40,6 +40,8 @@ export interface RegionData {
 export interface Widget {
   id: string
   title: string
+  description?: string
+  type?: string
   category: 'projects' | 'itt' | 'financial' | 'supply' | 'analytics' | 'insights'
   enabled: boolean
   order: number
