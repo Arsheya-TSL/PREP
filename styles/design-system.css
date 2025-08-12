@@ -1,0 +1,243 @@
+/* PREP Construction Management System - Global Design System */
+
+/* ===== COLOR PALETTE ===== */
+:root {
+  /* Primary Colors */
+  --blue-50: #eff6ff;
+  --blue-100: #dbeafe;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --blue-700: #1d4ed8;
+  
+  /* Neutral Colors */
+  --neutral-50: #fafafa;
+  --neutral-100: #f5f5f5;
+  --neutral-200: #e5e5e5;
+  --neutral-500: #737373;
+  --neutral-600: #525252;
+  --neutral-800: #262626;
+  
+  /* Status Colors */
+  --green-100: #dcfce7;
+  --green-500: #22c55e;
+  --green-600: #16a34a;
+  --amber-100: #fef3c7;
+  --amber-600: #d97706;
+  --red-100: #fee2e2;
+  --red-600: #dc2626;
+}
+
+/* ===== TYPOGRAPHY ===== */
+.page-header {
+  @apply text-2xl sm:text-3xl font-semibold text-neutral-800;
+}
+
+.page-subtitle {
+  @apply text-neutral-500 mt-1;
+}
+
+.card-title {
+  @apply text-lg font-semibold text-neutral-800;
+}
+
+.card-subtitle {
+  @apply text-neutral-500 text-sm mt-1;
+}
+
+.metric-label {
+  @apply text-sm font-medium text-neutral-600;
+}
+
+.metric-value {
+  @apply text-3xl font-bold text-neutral-800 mt-1;
+}
+
+.metric-trend {
+  @apply text-xs text-green-600 mt-1;
+}
+
+/* ===== LAYOUT COMPONENTS ===== */
+.page-container {
+  @apply space-y-6;
+}
+
+.page-header-section {
+  @apply mb-6;
+}
+
+.action-buttons {
+  @apply flex items-center gap-3 mb-6;
+}
+
+.card-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6;
+}
+
+/* ===== BUTTONS ===== */
+.btn-primary {
+  @apply h-11 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white;
+}
+
+.btn-secondary {
+  @apply h-11 px-4 rounded-xl hover:bg-neutral-100 border-neutral-200;
+}
+
+.btn-sm {
+  @apply h-9 px-3 rounded-lg;
+}
+
+/* ===== CARDS ===== */
+.card-base {
+  @apply bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300;
+}
+
+.card-header {
+  @apply flex items-center justify-between mb-6;
+}
+
+.card-content {
+  @apply flex items-center justify-between;
+}
+
+.icon-container {
+  @apply p-3 rounded-xl;
+}
+
+.icon-container-blue {
+  @apply p-3 bg-blue-100 rounded-xl;
+}
+
+.icon-container-green {
+  @apply p-3 bg-green-100 rounded-xl;
+}
+
+.icon-container-amber {
+  @apply p-3 bg-amber-100 rounded-xl;
+}
+
+.icon-container-neutral {
+  @apply p-3 bg-neutral-100 rounded-xl;
+}
+
+/* ===== FORMS ===== */
+.form-input {
+  @apply w-full h-11 px-3 text-sm bg-white border border-neutral-200 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none;
+}
+
+.form-select {
+  @apply w-full h-11 px-3 text-sm bg-white border border-neutral-200 rounded-lg focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none;
+}
+
+/* ===== DIALOGS ===== */
+.dialog-content {
+  @apply bg-white rounded-2xl border border-neutral-200;
+}
+
+.dialog-title {
+  @apply text-xl font-semibold text-neutral-800;
+}
+
+.dialog-description {
+  @apply text-neutral-500;
+}
+
+/* ===== BADGES ===== */
+.badge-neutral {
+  @apply text-xs bg-neutral-100 text-neutral-600 rounded-full px-2 py-0.5;
+}
+
+.badge-green {
+  @apply text-xs bg-green-100 text-green-800 rounded-full px-2 py-0.5;
+}
+
+.badge-amber {
+  @apply text-xs bg-amber-100 text-amber-800 rounded-full px-2 py-0.5;
+}
+
+.badge-red {
+  @apply text-xs bg-red-100 text-red-800 rounded-full px-2 py-0.5;
+}
+
+/* ===== TABLES ===== */
+.table-container {
+  @apply bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden;
+}
+
+.table-header {
+  @apply bg-neutral-50 border-b border-neutral-200;
+}
+
+.table-cell {
+  @apply px-6 py-4 text-sm text-neutral-800;
+}
+
+.table-header-cell {
+  @apply px-6 py-3 text-sm font-medium text-neutral-600;
+}
+
+/* ===== PROGRESS BARS ===== */
+.progress-bar {
+  @apply w-full h-2 bg-neutral-200 rounded-full overflow-hidden;
+}
+
+.progress-fill {
+  @apply h-full rounded-full;
+}
+
+.progress-blue {
+  @apply bg-gradient-to-r from-blue-500 to-blue-600;
+}
+
+.progress-green {
+  @apply bg-gradient-to-r from-green-500 to-green-600;
+}
+
+.progress-amber {
+  @apply bg-gradient-to-r from-amber-500 to-amber-600;
+}
+
+/* ===== RESPONSIVE UTILITIES ===== */
+@media (max-width: 640px) {
+  .page-header {
+    @apply text-xl;
+  }
+  
+  .card-grid {
+    @apply grid-cols-1;
+  }
+  
+  .action-buttons {
+    @apply flex-col items-stretch;
+  }
+}
+
+/* ===== ANIMATIONS ===== */
+.fade-in {
+  @apply transition-opacity duration-200 ease-in-out;
+}
+
+.slide-up {
+  @apply transition-transform duration-200 ease-out;
+}
+
+.hover-lift {
+  @apply hover:shadow-md hover:-translate-y-1 transition-all duration-200;
+}
+
+/* ===== FOCUS STATES ===== */
+.focus-ring {
+  @apply focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2;
+}
+
+/* ===== SHADOWS ===== */
+.shadow-card {
+  @apply shadow-sm;
+}
+
+.shadow-card-hover {
+  @apply shadow-md;
+}
+
+.shadow-elevated {
+  @apply shadow-lg;
+} 

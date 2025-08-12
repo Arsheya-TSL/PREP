@@ -1,0 +1,392 @@
+import { Project, RegionData, MonthlyData, SupplierData, ITTDeadline, ActiveITT, Insight, Widget } from './types'
+
+export const projects: Project[] = [
+  { 
+    id: 1, 
+    name: "Waterfront Office Complex", 
+    location: "London, UK",
+    country: "UK",
+    progress: 75, 
+    budget: 2500000, 
+    spent: 1875000, 
+    status: "On Track", 
+    deadline: "Dec 2025", 
+    satisfaction: 4.8, 
+    size: "Large",
+    score: 87,
+    team: ["JD", "AB", "CD"],
+    suppliers: 8,
+    issuesReported: 3,
+    reworkCost: 15000,
+    image: "🏢",
+    riskScore: 85,
+    materials: ["Steel", "Concrete", "Glass"],
+    tradeCategories: ["Structural", "Electrical", "HVAC"]
+  },
+  { 
+    id: 2, 
+    name: "City Hospital Extension", 
+    location: "Manchester, UK",
+    country: "UK", 
+    progress: 45, 
+    budget: 5200000, 
+    spent: 2340000, 
+    status: "Delayed", 
+    deadline: "Mar 2026", 
+    satisfaction: 4.2, 
+    size: "Extra Large",
+    score: 72,
+    team: ["EF", "GH", "IJ", "KL"],
+    suppliers: 12,
+    issuesReported: 8,
+    reworkCost: 45000,
+    image: "🏥",
+    riskScore: 45,
+    materials: ["Steel", "Concrete", "Medical Equipment"],
+    tradeCategories: ["Structural", "Electrical", "HVAC", "Medical"]
+  },
+  { 
+    id: 3, 
+    name: "Metro Station Upgrade", 
+    location: "Berlin, Germany",
+    country: "Germany",
+    progress: 92, 
+    budget: 850000, 
+    spent: 782000, 
+    status: "Ahead", 
+    deadline: "Jan 2025", 
+    satisfaction: 4.9, 
+    size: "Medium",
+    score: 94,
+    team: ["MN", "OP"],
+    suppliers: 5,
+    issuesReported: 1,
+    reworkCost: 2000,
+    image: "🚇",
+    riskScore: 95,
+    materials: ["Steel", "Tiles", "Electronics"],
+    tradeCategories: ["Structural", "Electrical"]
+  },
+  { 
+    id: 4, 
+    name: "Residential Complex A", 
+    location: "Paris, France",
+    country: "France",
+    progress: 30, 
+    budget: 1800000, 
+    spent: 540000, 
+    status: "On Track", 
+    deadline: "Sep 2025", 
+    satisfaction: 4.5, 
+    size: "Large",
+    score: 78,
+    team: ["QR", "ST", "UV"],
+    suppliers: 6,
+    issuesReported: 2,
+    reworkCost: 8000,
+    image: "🏘️",
+    riskScore: 78,
+    materials: ["Brick", "Concrete", "Insulation"],
+    tradeCategories: ["Structural", "Plumbing", "HVAC"]
+  },
+  { 
+    id: 5, 
+    name: "Tech Campus Phase 2", 
+    location: "Amsterdam, Netherlands",
+    country: "Netherlands",
+    progress: 60, 
+    budget: 3200000, 
+    spent: 1920000, 
+    status: "On Track", 
+    deadline: "Nov 2025", 
+    satisfaction: 4.6, 
+    size: "Large",
+    score: 81,
+    team: ["WX", "YZ", "AA"],
+    suppliers: 9,
+    issuesReported: 4,
+    reworkCost: 12000,
+    image: "🏫",
+    riskScore: 82,
+    materials: ["Steel", "Glass", "Smart Systems"],
+    tradeCategories: ["Structural", "Electrical", "Technology"]
+  },
+  { 
+    id: 6, 
+    name: "Shopping Center Renovation", 
+    location: "Madrid, Spain",
+    country: "Spain",
+    progress: 85, 
+    budget: 1400000, 
+    spent: 1190000, 
+    status: "On Track", 
+    deadline: "Feb 2025", 
+    satisfaction: 4.7, 
+    size: "Medium",
+    score: 89,
+    team: ["BB", "CC"],
+    suppliers: 7,
+    issuesReported: 2,
+    reworkCost: 5000,
+    image: "🛍️",
+    riskScore: 88,
+    materials: ["Steel", "Glass", "Flooring"],
+    tradeCategories: ["Structural", "Interior", "HVAC"]
+  }
+]
+
+export const regionData: RegionData[] = [
+  { 
+    region: "UK", 
+    color: "#22c55e", 
+    performance: "Great",
+    projectsOnTime: 85,
+    avgITTResponse: 3.2,
+    supplierQuality: 4.6,
+    budgetUsage: 87,
+    activeProjects: 2,
+    totalProjects: 4
+  },
+  { 
+    region: "Germany", 
+    color: "#3b82f6", 
+    performance: "Excellent",
+    projectsOnTime: 95,
+    avgITTResponse: 2.8,
+    supplierQuality: 4.8,
+    budgetUsage: 92,
+    activeProjects: 1,
+    totalProjects: 2
+  },
+  { 
+    region: "France", 
+    color: "#f59e0b", 
+    performance: "Good",
+    projectsOnTime: 78,
+    avgITTResponse: 4.1,
+    supplierQuality: 4.3,
+    budgetUsage: 82,
+    activeProjects: 1,
+    totalProjects: 2
+  },
+  { 
+    region: "Netherlands", 
+    color: "#22c55e", 
+    performance: "Great",
+    projectsOnTime: 88,
+    avgITTResponse: 3.5,
+    supplierQuality: 4.5,
+    budgetUsage: 85,
+    activeProjects: 1,
+    totalProjects: 1
+  },
+  { 
+    region: "Spain", 
+    color: "#22c55e", 
+    performance: "Great",
+    projectsOnTime: 90,
+    avgITTResponse: 3.0,
+    supplierQuality: 4.7,
+    budgetUsage: 89,
+    activeProjects: 1,
+    totalProjects: 1
+  }
+]
+
+export const monthlyData: MonthlyData[] = [
+  { month: 'Jan', budget: 800, spent: 650, projects: 2, variance: 150, satisfaction: 4.2 },
+  { month: 'Feb', budget: 900, spent: 800, projects: 2, variance: 100, satisfaction: 4.3 },
+  { month: 'Mar', budget: 1200, spent: 1100, projects: 3, variance: 100, satisfaction: 4.1 },
+  { month: 'Apr', budget: 1500, spent: 1200, projects: 3, variance: 300, satisfaction: 4.5 },
+  { month: 'May', budget: 1400, spent: 1300, projects: 4, variance: 100, satisfaction: 4.7 },
+  { month: 'Jun', budget: 1600, spent: 1450, projects: 4, variance: 150, satisfaction: 4.6 },
+]
+
+export const supplierPerformanceData: SupplierData[] = [
+  { 
+    name: "ElectroTech Solutions", 
+    score: 4.8, 
+    projects: 12, 
+    onTimeDelivery: 95, 
+    region: "UK", 
+    category: "Electrical", 
+    costPerUnit: 125, 
+    approved: true, 
+    contact: "john@electrotech.com", 
+    phone: "+44 20 1234 5678",
+    materialsAvailable: ["Cables", "Switches", "Lighting"],
+    stockLevels: { "Cables": 85, "Switches": 92, "Lighting": 78 },
+    certifications: ["ISO 9001", "NICEIC"],
+    responseTime: 2.1
+  },
+  { 
+    name: "BuildRight Construction", 
+    score: 4.6, 
+    projects: 8, 
+    onTimeDelivery: 88, 
+    region: "UK", 
+    category: "Structural", 
+    costPerUnit: 200, 
+    approved: true, 
+    contact: "info@buildright.co.uk", 
+    phone: "+44 161 987 6543",
+    materialsAvailable: ["Steel", "Concrete", "Rebar"],
+    stockLevels: { "Steel": 78, "Concrete": 95, "Rebar": 82 },
+    certifications: ["CHAS", "Constructionline"],
+    responseTime: 3.2
+  },
+  { 
+    name: "Climate Control Systems", 
+    score: 4.9, 
+    projects: 15, 
+    onTimeDelivery: 98, 
+    region: "Germany", 
+    category: "HVAC", 
+    costPerUnit: 180, 
+    approved: true, 
+    contact: "sales@climate-ctrl.de", 
+    phone: "+49 30 555 0123",
+    materialsAvailable: ["AC Units", "Ventilation", "Heating"],
+    stockLevels: { "AC Units": 88, "Ventilation": 94, "Heating": 91 },
+    certifications: ["TÜV", "CE Mark"],
+    responseTime: 1.8
+  },
+  { 
+    name: "Precision Plumbing Ltd", 
+    score: 4.3, 
+    projects: 6, 
+    onTimeDelivery: 82, 
+    region: "UK", 
+    category: "Plumbing", 
+    costPerUnit: 95, 
+    approved: true, 
+    contact: "contact@precisionplumb.com", 
+    phone: "+44 113 456 7890",
+    materialsAvailable: ["Pipes", "Fittings", "Boilers"],
+    stockLevels: { "Pipes": 76, "Fittings": 83, "Boilers": 65 },
+    certifications: ["Gas Safe", "CIPHE"],
+    responseTime: 4.1
+  },
+  { 
+    name: "SteelWorks Pro", 
+    score: 4.7, 
+    projects: 10, 
+    onTimeDelivery: 92, 
+    region: "Germany", 
+    category: "Structural", 
+    costPerUnit: 220, 
+    approved: true, 
+    contact: "info@steelworks-pro.de", 
+    phone: "+49 40 888 9999",
+    materialsAvailable: ["Steel Beams", "Plates", "Fasteners"],
+    stockLevels: { "Steel Beams": 89, "Plates": 72, "Fasteners": 96 },
+    certifications: ["CE Mark", "ISO 3834"],
+    responseTime: 2.5
+  },
+  { 
+    name: "EuroElectric", 
+    score: 4.4, 
+    projects: 7, 
+    onTimeDelivery: 85, 
+    region: "France", 
+    category: "Electrical", 
+    costPerUnit: 135, 
+    approved: false, 
+    contact: "contact@euroelectric.fr", 
+    phone: "+33 1 42 86 83 88",
+    materialsAvailable: ["Cables", "Panels", "Meters"],
+    stockLevels: { "Cables": 68, "Panels": 75, "Meters": 82 },
+    certifications: ["NF", "CONSUEL"],
+    responseTime: 3.8
+  },
+  { 
+    name: "Dutch Building Solutions", 
+    score: 4.8, 
+    projects: 9, 
+    onTimeDelivery: 96, 
+    region: "Netherlands", 
+    category: "General", 
+    costPerUnit: 175, 
+    approved: true, 
+    contact: "info@dutchbuild.nl", 
+    phone: "+31 20 625 4321",
+    materialsAvailable: ["Concrete", "Timber", "Insulation"],
+    stockLevels: { "Concrete": 91, "Timber": 87, "Insulation": 93 },
+    certifications: ["VCA", "BRL"],
+    responseTime: 2.2
+  },
+  { 
+    name: "Iberia Construction", 
+    score: 4.2, 
+    projects: 5, 
+    onTimeDelivery: 78, 
+    region: "Spain", 
+    category: "Structural", 
+    costPerUnit: 190, 
+    approved: true, 
+    contact: "ventas@iberiaconstruct.es", 
+    phone: "+34 91 123 45 67",
+    materialsAvailable: ["Steel", "Concrete", "Tiles"],
+    stockLevels: { "Steel": 73, "Concrete": 86, "Tiles": 79 },
+    certifications: ["AENOR", "ENAC"],
+    responseTime: 3.6
+  },
+]
+
+export const upcomingITTDeadlines: ITTDeadline[] = [
+  { project: "Metro Station Upgrade", task: "Final Inspection", daysLeft: 3, priority: "High", value: 85000, suppliers: 5, responses: 3, status: "Urgent" },
+  { project: "Waterfront Office Complex", task: "Electrical ITT Due", daysLeft: 7, priority: "Medium", value: 125000, suppliers: 8, responses: 5, status: "Active" },
+  { project: "City Hospital Extension", task: "Structural Review", daysLeft: 12, priority: "Low", value: 200000, suppliers: 12, responses: 8, status: "Active" },
+  { project: "Tech Campus Phase 2", task: "HVAC Systems", daysLeft: 15, priority: "Medium", value: 95000, suppliers: 6, responses: 2, status: "Active" },
+  { project: "Shopping Center Renovation", task: "Interior Fit-out", daysLeft: 18, priority: "Low", value: 65000, suppliers: 4, responses: 4, status: "Active" },
+]
+
+export const activeITTs: ActiveITT[] = [
+  { id: 1, project: "Waterfront Office Complex", category: "Electrical", status: "Draft", created: "2024-01-15", deadline: "2024-02-15", suppliers: [], responses: 0, budget: 125000, region: "UK" },
+  { id: 2, project: "City Hospital Extension", category: "Structural", status: "Sent", created: "2024-01-10", deadline: "2024-02-10", suppliers: ["BuildRight Construction", "SteelWorks Pro"], responses: 1, budget: 200000, region: "UK" },
+  { id: 3, project: "Metro Station Upgrade", category: "HVAC", status: "Replied", created: "2024-01-05", deadline: "2024-02-05", suppliers: ["Climate Control Systems"], responses: 3, budget: 85000, region: "Germany" },
+]
+
+export const recentInsights: Insight[] = [
+  { type: "budget", title: "City Hospital Extension over budget", description: "£260K variance detected", severity: "high", timestamp: "2 hours ago" },
+  { type: "supplier", title: "New supplier approved", description: "Dutch Building Solutions certified", severity: "positive", timestamp: "4 hours ago" },
+  { type: "itt", title: "3 ITTs pending response", description: "Electrical tender deadline approaching", severity: "medium", timestamp: "6 hours ago" },
+  { type: "project", title: "Metro Station ahead of schedule", description: "2 weeks early completion expected", severity: "positive", timestamp: "1 day ago" },
+]
+
+export const allWidgets: Widget[] = [
+  // Demo showcase widget
+  { id: 'demo-showcase', title: 'System Showcase', category: 'analytics', enabled: true, order: 0, size: 'large', pages: ['dashboard'] },
+  
+  // Dashboard widgets
+  { id: 'total-projects', title: 'Total Projects', category: 'projects', enabled: true, order: 1, size: 'medium', pages: ['dashboard'] },
+  { id: 'active-projects', title: 'Active Projects', category: 'projects', enabled: true, order: 2, size: 'medium', pages: ['dashboard'] },
+  { id: 'project-kpis', title: 'Active Project KPIs', category: 'projects', enabled: true, order: 3, size: 'large', pages: ['dashboard'] },
+  { id: 'budget-vs-spend', title: 'Budget vs Spend', category: 'financial', enabled: true, order: 4, size: 'large', pages: ['dashboard', 'cost-system'] },
+  { id: 'itt-deadlines', title: 'ITT Deadlines', category: 'itt', enabled: true, order: 5, size: 'large', pages: ['dashboard', 'itt-manager'] },
+  { id: 'supplier-performance', title: 'Supplier Performance Rankings', category: 'supply', enabled: true, order: 6, size: 'large', pages: ['dashboard', 'supply-chain'] },
+  { id: 'quick-insights', title: 'Quick Insights', category: 'insights', enabled: true, order: 7, size: 'large', pages: ['dashboard'] },
+  { id: 'project-completion', title: 'Project Completion Rate', category: 'projects', enabled: true, order: 8, size: 'medium', pages: ['dashboard', 'projects'] },
+  { id: 'pending-itts', title: 'Pending ITTs', category: 'itt', enabled: true, order: 9, size: 'medium', pages: ['dashboard', 'itt-manager'] },
+  { id: 'supplier-count', title: 'Supplier Network', category: 'supply', enabled: true, order: 10, size: 'medium', pages: ['dashboard', 'supply-chain'] },
+  
+  // Supply Chain specific widgets
+  { id: 'material-availability', title: 'Material Availability', category: 'supply', enabled: true, order: 11, size: 'large', pages: ['supply-chain'] },
+  { id: 'supplier-recommendations', title: 'Supplier Recommendations', category: 'supply', enabled: true, order: 12, size: 'large', pages: ['supply-chain'] },
+  { id: 'cost-trends', title: 'Cost Trends', category: 'financial', enabled: false, order: 13, size: 'extra-large', pages: ['supply-chain', 'cost-system'] },
+  
+  // Projects specific widgets
+  { id: 'project-heatmap', title: 'Project Heatmap', category: 'projects', enabled: true, order: 14, size: 'extra-large', pages: ['projects'] },
+  { id: 'team-activity', title: 'Team Activity', category: 'projects', enabled: false, order: 15, size: 'medium', pages: ['projects'] },
+  { id: 'risk-alerts', title: 'Risk Alerts', category: 'analytics', enabled: true, order: 16, size: 'medium', pages: ['projects'] },
+  
+  // ITT Manager specific widgets  
+  { id: 'itt-response-rate', title: 'ITT Response Rate', category: 'itt', enabled: true, order: 17, size: 'medium', pages: ['itt-manager'] },
+  { id: 'supplier-bidding', title: 'Supplier Bidding Activity', category: 'supply', enabled: false, order: 18, size: 'large', pages: ['itt-manager'] },
+  
+  // Analytics widgets
+  { id: 'satisfaction-trend', title: 'Satisfaction Trend', category: 'analytics', enabled: false, order: 19, size: 'large', pages: ['dashboard', 'projects'] },
+  { id: 'performance-analytics', title: 'Performance Analytics', category: 'analytics', enabled: false, order: 20, size: 'extra-large', pages: ['dashboard'] },
+]
+
+export const WIDGET_ITEM_TYPE = 'widget'

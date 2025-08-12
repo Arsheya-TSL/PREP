@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interactive World Map - D3.js & TopoJSON</title>
+  
+  <!-- 
+    HOW TO RUN LOCALLY:
+    1. Save this file as interactive-world-map.html
+    2. Open terminal/command prompt in the same directory
+    3. Run: python -m http.server 8000 (or any port)
+    4. Open browser and go to: http://localhost:8000/interactive-world-map.html
+    5. Or simply double-click the HTML file to open directly in browser
+  -->
+  
+  <style>
+    /* CSS Variables for easy theming */
+    :root {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #1a1a1a;
+      --bg-gradient: radial-gradient(1000px 700px at 60% 10%, #0e1a31, #0a1426 65%);
+      --text-primary: #ffffff;
+      --text-secondary: #888888;
+      --accent-primary: #4a7ab8;
+      --accent-secondary: #2a4a7a;
+      --country-default: #193557;
+      --country-hover: #2a4a7a;
+      --country-selected: #4a7ab8;
+      --border-color: #333333;
+      --shadow-light: rgba(0, 0, 0, 0.3);
+      --shadow-heavy: rgba(0, 0, 0, 0.8);
+      --modal-bg: rgba(0, 0, 0, 0.8);
+    }
+
+    /* Reset and base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* Main container */
+    .container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background: var(--bg-gradient);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      padding: 20px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      background: linear-gradient(45deg, var(--accent-primary), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    /* Map container */
+    .map-container {
+      flex: 1;
+      position: relative;
+      padding: 20px;
+    }
+
+    .map-card {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 8px 32px var(--shadow-light);
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* SVG map styles */
+    #map {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Country styles with smooth transitions */
+    .country {
+      fill: var(--country-default);
+      stroke: #0a1b30;
+      stroke-width: 0.6;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .country:hover {
+      fill: var(--country-hover);
+      stroke: var(--accent-primary);
+      stroke-width: 1.2;
+    }
+
+    .country.selected {
+      fill: var(--country-selected);
+      stroke: var(--accent-primary);
+      stroke-width: 2;
+    }
+
+    /* Graticule layer */
+    .graticule {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.1);
+      stroke-width: 0.5;
+      opacity: 0.3;
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px var(--shadow-light);
+      border: 1px solid var(--border-color);
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: all 0.2s ease;
+      z-index: 100;
+    }
+
+    .tooltip.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Modal styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--modal-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 500px;
+      width: 90%;
+      position: relative;
+      transform: scale(0.8) translateY(20px);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 20px 40px var(--shadow-heavy);
+      border: 1px solid var(--border-color);
+    }
+
+    .modal.active .modal-content {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 24px;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+      background: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      color: var(--text-secondary);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    /* Loading and error states */
+    .loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--text-secondary);
+      font-size: 16px;
+      text-align: center;
+    }
+
+    .error {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--bg-secondary);
+      color: #ff6b6b;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid #ff6b6b;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 8px 32px var(--shadow-light);
+    }
+
+    .error h3 {
+      margin-bottom: 12px;
+      color: #ff6b6b;
+    }
+
+    .error p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+    }
+
+    .error code {
+      background: var(--bg-primary);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      color: var(--accent-primary);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .header h1 {
+        font-size: 1.5rem;
+      }
+      
+      .modal-content {
+        padding: 24px;
+        margin: 20px;
+      }
+      
+      .modal-title {
+        font-size: 20px;
+      }
+    }
+
+    /* Animation for loading spinner */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--text-secondary);
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🌍 Interactive World Map</h1>
+      <p>Hover to highlight, click to explore countries</p>
+    </div>
+
+    <!-- Map Container -->
+    <div class="map-container">
+      <div class="map-card">
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          Loading world map data...
+        </div>
+        
+        <div class="error" id="error" style="display: none;">
+          <h3>⚠️ Data Loading Error</h3>
+          <p>Could not load world map data. This usually happens when running the file directly in a browser due to CORS restrictions.</p>
+          <p><strong>Solution:</strong> Run via a local server:</p>
+          <code>python -m http.server 8000</code>
+          <p>Then open: <code>http://localhost:8000/interactive-world-map.html</code></p>
+        </div>
+
+        <svg id="map" role="img" aria-label="World map of countries"></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tooltip -->
+  <div class="tooltip" id="tooltip"></div>
+
+  <!-- Modal -->
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <h2 class="modal-title" id="modalTitle">Country Name</h2>
+      <div class="modal-body" id="modalBody">
+        You clicked on a country.
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+  
+  <script>
+    // Global variables
+    let selectedCountry = null;
+    let countriesData = null;
+    let nameById = null;
+
+    // CDN URLs with fallbacks
+    const CDN_URLS = {
+      world: [
+        'https://unpkg.com/world-atlas@2/countries-110m.json',
+        'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+        'https://fastly.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
+      ],
+      names: [
+        'https://unpkg.com/world-atlas@2/countries-110m.tsv',
+        'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.tsv',
+        'https://fastly.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
+      ]
+    };
+
+    // Utility function to fetch from multiple CDNs
+    async function fetchWithFallback(urls, type = 'json') {
+      for (const url of urls) {
+        try {
+          console.log(`Trying to fetch from: ${url}`);
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          const data = type === 'tsv' ? await response.text() : await response.json();
+          console.log(`Successfully fetched from: ${url}`);
+          return data;
+        } catch (error) {
+          console.warn(`Failed to fetch from ${url}:`, error.message);
+        }
+      }
+      throw new Error(`All CDN sources failed for ${type} data`);
+    }
+
+    // Modal functionality
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    function openModal(countryName) {
+      modalTitle.textContent = countryName;
+      modalBody.textContent = `You clicked ${countryName}. This modal can be customized to show country-specific information, statistics, or any other content you'd like to display.`;
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      modal.classList.remove('active');
+      document.body.style.overflow = 'auto';
+      // Clear selection
+      if (selectedCountry) {
+        d3.select(selectedCountry).classed('selected', false);
+        selectedCountry = null;
+      }
+    }
+
+    // Event listeners for modal
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && modal.classList.contains('active')) {
+        closeModal();
+      }
+    });
+
+    // Tooltip functionality
+    const tooltip = document.getElementById('tooltip');
+
+    function showTooltip(event, text) {
+      tooltip.textContent = text;
+      tooltip.style.left = event.pageX + 10 + 'px';
+      tooltip.style.top = event.pageY - 10 + 'px';
+      tooltip.classList.add('show');
+    }
+
+    function hideTooltip() {
+      tooltip.classList.remove('show');
+    }
+
+    // Main map initialization
+    async function initMap() {
+      try {
+        // Show loading state
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('error').style.display = 'none';
+
+        // Fetch data with fallbacks
+        console.log('Fetching world map data...');
+        const [world, names] = await Promise.all([
+          fetchWithFallback(CDN_URLS.world, 'json'),
+          fetchWithFallback(CDN_URLS.names, 'tsv')
+        ]);
+
+        // Parse TSV data
+        const parsedNames = d3.tsvParse(names);
+        nameById = new Map(parsedNames.map(d => [d.id, d.name]));
+        
+        // Convert TopoJSON to GeoJSON
+        countriesData = topojson.feature(world, world.objects.countries).features;
+        
+        console.log(`Successfully loaded ${countriesData.length} countries`);
+        
+        if (countriesData.length === 0) {
+          throw new Error('No countries found in data');
+        }
+
+        // Hide loading, show map
+        document.getElementById('loading').style.display = 'none';
+        
+        // Create the map
+        createMap();
+
+      } catch (error) {
+        console.error('Error initializing map:', error);
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+      }
+    }
+
+    // Create the actual map visualization
+    function createMap() {
+      const svg = d3.select('#map');
+      const width = svg.node().getBoundingClientRect().width;
+      const height = svg.node().getBoundingClientRect().height;
+
+      // Create projection and fit to countries
+      const projection = d3.geoNaturalEarth1()
+        .fitSize([width, height], countriesData);
+      
+      const path = d3.geoPath(projection);
+      const g = svg.append('g');
+
+      // Add graticule
+      const graticule = d3.geoGraticule10();
+      g.append('path')
+        .datum(graticule)
+        .attr('class', 'graticule')
+        .attr('d', path);
+
+      // Add ocean background
+      g.append('path')
+        .datum({type: 'Sphere'})
+        .attr('fill', '#0b1220')
+        .attr('stroke', '#163058')
+        .attr('d', path);
+
+      // Add countries
+      g.selectAll('path.country')
+        .data(countriesData)
+        .join('path')
+        .attr('class', 'country')
+        .attr('d', path)
+        .on('mouseover', function(event, d) {
+          const countryName = nameById.get(d.id) || 'Unknown Country';
+          showTooltip(event, countryName);
+        })
+        .on('mouseout', function() {
+          hideTooltip();
+        })
+        .on('click', function(event, d) {
+          const countryName = nameById.get(d.id) || 'Unknown Country';
+          
+          // Update selection
+          if (selectedCountry) {
+            d3.select(selectedCountry).classed('selected', false);
+          }
+          selectedCountry = this;
+          d3.select(this).classed('selected', true);
+          
+          openModal(countryName);
+        });
+
+      // Handle window resize
+      window.addEventListener('resize', function() {
+        const newWidth = svg.node().getBoundingClientRect().width;
+        const newHeight = svg.node().getBoundingClientRect().height;
+        
+        projection.fitSize([newWidth, newHeight], countriesData);
+        
+        g.selectAll('path')
+          .attr('d', path);
+      });
+
+      console.log(`Rendered ${countriesData.length} countries successfully`);
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      // Check if D3 and TopoJSON are loaded
+      if (typeof d3 === 'undefined') {
+        console.error('D3.js not loaded');
+        document.getElementById('error').innerHTML = '<h3>⚠️ D3.js Error</h3><p>D3.js library failed to load. Please check your internet connection.</p>';
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        return;
+      }
+
+      if (typeof topojson === 'undefined') {
+        console.error('TopoJSON not loaded');
+        document.getElementById('error').innerHTML = '<h3>⚠️ TopoJSON Error</h3><p>TopoJSON library failed to load. Please check your internet connection.</p>';
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('error').style.display = 'block';
+        return;
+      }
+
+      initMap();
+    });
+  </script>
+</body>
+</html> 

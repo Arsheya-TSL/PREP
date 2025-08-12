@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Interactive World Map</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #ffffff;
+      overflow-x: hidden;
+    }
+
+    #mapContainer {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background: radial-gradient(1000px 700px at 60% 10%, #0e1a31, #0a1426 65%);
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .country {
+      fill: #193557;
+      stroke: #0a1b30;
+      stroke-width: 0.6;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .country:hover {
+      fill: #2a4a7a;
+      stroke: #4a7ab8;
+      stroke-width: 1.2;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    .modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 400px;
+      width: 90%;
+      position: relative;
+      transform: scale(0.8);
+      transition: transform 0.3s ease;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      border: 1px solid #333;
+    }
+
+    .modal.active .modal-content {
+      transform: scale(1);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 24px;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+      background: #333;
+      color: #fff;
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #fff;
+    }
+
+    .modal-subtitle {
+      color: #888;
+      font-size: 14px;
+    }
+
+    .loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #888;
+      font-size: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .modal-content {
+        padding: 24px;
+        margin: 20px;
+      }
+      
+      .modal-title {
+        font-size: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="mapContainer">
+    <div class="loading">Loading world map...</div>
+    <svg id="map" role="img" aria-label="World map of countries"></svg>
+  </div>
+
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <h2 class="modal-title" id="modalTitle">Country Name</h2>
+      <p class="modal-subtitle">Click outside or press ESC to close</p>
+    </div>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    // Country data with simplified geometries
+    const countriesData = [
+      { name: "United States", bounds: [[-125, 25], [-66, 50]] },
+      { name: "Canada", bounds: [[-141, 42], [-52, 84]] },
+      { name: "Mexico", bounds: [[-118, 15], [-86, 33]] },
+      { name: "Brazil", bounds: [[-74, -34], [-34, 6]] },
+      { name: "Argentina", bounds: [[-74, -55], [-53, -22]] },
+      { name: "United Kingdom", bounds: [[-8, 50], [2, 59]] },
+      { name: "France", bounds: [[-5, 41], [10, 51]] },
+      { name: "Germany", bounds: [[6, 47], [15, 55]] },
+      { name: "Italy", bounds: [[6, 36], [18, 47]] },
+      { name: "Spain", bounds: [[-10, 36], [4, 44]] },
+      { name: "Russia", bounds: [[30, 41], [190, 82]] },
+      { name: "China", bounds: [[73, 18], [135, 54]] },
+      { name: "Japan", bounds: [[129, 31], [146, 46]] },
+      { name: "India", bounds: [[68, 8], [97, 37]] },
+      { name: "Australia", bounds: [[113, -44], [154, -10]] },
+      { name: "South Africa", bounds: [[16, -35], [33, -22]] },
+      { name: "Egypt", bounds: [[25, 22], [37, 32]] },
+      { name: "Nigeria", bounds: [[3, 4], [15, 14]] },
+      { name: "Kenya", bounds: [[34, -5], [42, 5]] },
+      { name: "Morocco", bounds: [[-13, 28], [-1, 36]] }
+    ];
+
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+
+    function openModal(countryName) {
+      modalTitle.textContent = countryName;
+      modal.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      modal.classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
+
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && modal.classList.contains('active')) {
+        closeModal();
+      }
+    });
+
+    function createCountryGeometry(bounds) {
+      const [minLng, minLat] = bounds[0];
+      const [maxLng, maxLat] = bounds[1];
+      
+      return {
+        type: "Polygon",
+        coordinates: [[
+          [minLng, minLat],
+          [maxLng, minLat],
+          [maxLng, maxLat],
+          [minLng, maxLat],
+          [minLng, minLat]
+        ]]
+      };
+    }
+
+    function initMap() {
+      const svg = d3.select('#map');
+      document.querySelector('.loading').style.display = 'none';
+
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      
+      const projection = d3.geoNaturalEarth1()
+        .fitSize([width, height], {type: "Sphere"});
+      
+      const path = d3.geoPath(projection);
+      const g = svg.append('g');
+
+      // Add ocean background
+      g.append('path')
+        .datum({type: 'Sphere'})
+        .attr('fill', '#0b1220')
+        .attr('stroke', '#163058')
+        .attr('d', path);
+
+      // Create country features
+      const countries = countriesData.map(country => ({
+        type: "Feature",
+        properties: { name: country.name },
+        geometry: createCountryGeometry(country.bounds)
+      }));
+      
+      g.selectAll('path.country')
+        .data(countries)
+        .join('path')
+        .attr('class', 'country')
+        .attr('d', d => path(d.geometry))
+        .on('mouseover', function(event, d) {
+          d3.select(this).style('fill', '#2a4a7a');
+        })
+        .on('mouseout', function(event, d) {
+          d3.select(this).style('fill', '#193557');
+        })
+        .on('click', function(event, d) {
+          const countryName = d.properties.name;
+          openModal(countryName);
+        })
+        .append('title')
+        .text(d => d.properties.name);
+
+      // Handle window resize
+      window.addEventListener('resize', function() {
+        const newWidth = window.innerWidth;
+        const newHeight = window.innerHeight;
+        
+        projection.fitSize([newWidth, newHeight], {type: "Sphere"});
+        
+        g.selectAll('path')
+          .attr('d', path);
+      });
+    }
+
+    // Initialize when D3 is loaded
+    if (window.d3) {
+      initMap();
+    } else {
+      document.addEventListener('DOMContentLoaded', initMap);
+    }
+  </script>
+</body>
+</html> 
