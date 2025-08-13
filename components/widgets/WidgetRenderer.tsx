@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Separator } from "../ui/separator"
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import { Widget, ViewMode } from "../../lib/types"
-import { projects, monthlyData, upcomingITTDeadlines, supplierPerformanceData, recentInsights } from "../../lib/constants"
+import { projects, monthlyData, upcomingITTDeadlines, supplierPerformanceData, recentInsights, activeITTs } from "../../lib/constants"
 import { 
   getStatusColor, 
   getPriorityColor, 
@@ -27,9 +27,10 @@ interface WidgetRendererProps {
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
   screenSize?: 'mobile' | 'tablet' | 'desktop'
+  userITTs?: any[]
 }
 
-export default function WidgetRenderer({ widget, viewMode, setViewMode, screenSize = 'desktop' }: WidgetRendererProps) {
+export default function WidgetRenderer({ widget, viewMode, setViewMode, screenSize = 'desktop', userITTs = [] }: WidgetRendererProps) {
   const baseCardClass = `
     bg-white border border-border rounded-2xl shadow-lg hover:shadow-xl 
     transition-all duration-300 h-full flex flex-col group
@@ -101,44 +102,84 @@ export default function WidgetRenderer({ widget, viewMode, setViewMode, screenSi
       )
 
     case 'total-projects':
+      // Calculate live tenders data
+      const totalTenders = activeITTs.length + (userITTs?.length || 0)
+      const activeTenders = activeITTs.filter(itt => itt.status === 'Sent' || itt.status === 'Draft').length + 
+                           (userITTs?.filter(itt => itt.status === 'Sent' || itt.status === 'Draft').length || 0)
+      const completedTenders = totalTenders - activeTenders
+      const yearlyProgress = Math.round((totalTenders / 50) * 100) // Assuming target of 50 tenders/year
+      
+      // Country breakdown (top 3)
+      const countryStats = [...activeITTs, ...(userITTs || [])].reduce((acc, itt) => {
+        const country = itt.region || 'Unknown'
+        acc[country] = (acc[country] || 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+      const topCountries = Object.entries(countryStats)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 3)
+      
       return (
         <Card className={`${baseCardClass} bg-gradient-to-br from-white to-blue-50/30`}>
           <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${getWidgetPadding(widget.size)} pb-2`}>
             <div className="space-y-1 flex-1 min-w-0">
               <CardTitle className={`${getWidgetTitleSize(widget.size)} text-foreground truncate`}>
-                {isCompact ? 'Projects' : 'Total Projects'}
+                {isCompact ? 'Live Tenders' : 'Total Live Tenders'}
               </CardTitle>
               {!isCompact && (
                 <p className="text-xs text-muted-foreground truncate">
-                  {viewMode} view
+                  Active ITTs across all projects
                 </p>
               )}
             </div>
             <div className={`p-3 bg-gradient-to-br from-primary/10 to-blue-100 rounded-xl flex-shrink-0 ${isCompact ? 'p-2' : 'p-3'} shadow-sm`}>
-              <Building2 className={`${getWidgetIconSize(widget.size)} text-primary`} />
+              <FileText className={`${getWidgetIconSize(widget.size)} text-primary`} />
             </div>
           </CardHeader>
           <CardContent className={`flex-1 flex flex-col justify-between ${getWidgetPadding(widget.size)} pt-0`}>
             <div>
-              <div className={`${getWidgetValueSize(widget.size)} text-foreground mb-1`}>24</div>
+              <div className={`${getWidgetValueSize(widget.size)} text-foreground mb-1`}>{totalTenders}</div>
               <div className={`flex items-center ${isCompact ? 'text-xs' : 'text-sm'} text-muted-foreground`}>
                 <TrendingUp className={`${getWidgetIconSize(widget.size)} mr-1.5 text-green-600`} />
-                <span className="text-green-600 font-medium">+12%</span>
+                <span className="text-green-600 font-medium">+{activeTenders}</span>
                 {!isCompact && (
-                  <span className="ml-1">
-                    from last {viewMode === 'daily' ? 'day' : viewMode === 'weekly' ? 'week' : viewMode === 'monthly' ? 'month' : 'year'}
-                  </span>
+                  <span className="ml-1">active this month</span>
                 )}
               </div>
             </div>
             {!isCompact && (
-              <div className="mt-4">
-                <div className={`h-2 bg-secondary rounded-full overflow-hidden ${isCompact ? 'mt-2' : 'mt-4'}`}>
-                  <div className="h-full w-3/4 bg-primary rounded-full transition-all duration-500" />
+              <div className="mt-4 space-y-3">
+                {/* Yearly Progress */}
+                <div>
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <span>Yearly Progress</span>
+                    <span>{yearlyProgress}%</span>
+                  </div>
+                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500" 
+                      style={{ width: `${Math.min(yearlyProgress, 100)}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                  <span>18 completed</span>
-                  <span>6 active</span>
+                
+                {/* Top Countries */}
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground mb-2">Top Regions</div>
+                  {topCountries.map(([country, count]) => (
+                    <div key={country} className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-foreground">{country}</span>
+                      <div className="flex items-center gap-2 flex-1 mx-2">
+                        <div className="flex-1 h-1 bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full" 
+                            style={{ width: `${(count / totalTenders) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted-foreground w-4">{count}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -147,6 +188,18 @@ export default function WidgetRenderer({ widget, viewMode, setViewMode, screenSi
       )
 
     case 'active-projects':
+      // Calculate timeline progress for projects
+      const activeProjects = projects.filter(p => p.status !== 'Completed')
+      const calculateTimelineProgress = (project: any) => {
+        const startDate = new Date('2024-01-01') // Mock start date
+        const endDate = new Date(project.deadline)
+        const currentDate = new Date()
+        const totalDuration = endDate.getTime() - startDate.getTime()
+        const elapsedTime = currentDate.getTime() - startDate.getTime()
+        const timelineProgress = Math.min(100, Math.max(0, (elapsedTime / totalDuration) * 100))
+        return Math.round(timelineProgress)
+      }
+      
       return (
         <Card className={`${baseCardClass} bg-gradient-to-br from-white to-green-50/30`}>
           <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${getWidgetPadding(widget.size)} pb-2`}>
@@ -155,32 +208,78 @@ export default function WidgetRenderer({ widget, viewMode, setViewMode, screenSi
                 {isCompact ? 'Active' : 'Active Projects'}
               </CardTitle>
               {!isCompact && (
-                <p className="text-xs text-muted-foreground">Currently in progress</p>
+                <p className="text-xs text-muted-foreground">Timeline progress vs planned</p>
               )}
             </div>
             <div className={`p-3 bg-gradient-to-br from-green-500/10 to-green-100 rounded-xl flex-shrink-0 ${isCompact ? 'p-2' : 'p-3'} shadow-sm`}>
-              <Building2 className={`${getWidgetIconSize(widget.size)} text-green-600`} />
+              <Calendar className={`${getWidgetIconSize(widget.size)} text-green-600`} />
             </div>
           </CardHeader>
           <CardContent className={`flex-1 ${getWidgetPadding(widget.size)} pt-0`}>
-            <div className={`${getWidgetValueSize(widget.size)} text-foreground ${isCompact ? 'mb-2' : 'mb-4'}`}>6</div>
-            <div className="space-y-2">
-              {projects.slice(0, isCompact ? 2 : isExpanded ? 4 : 3).map((project) => (
-                <div key={project.id} className={`flex items-center justify-between ${isCompact ? 'p-1' : 'p-2'} rounded-lg hover:bg-secondary/30 transition-colors`}>
-                  <div className="flex-1 min-w-0">
-                    <span className={`${isCompact ? 'text-xs' : 'text-sm'} font-medium text-foreground truncate block`}>
-                      {isCompact ? project.name.split(' ').slice(0, 2).join(' ') : project.name}
-                    </span>
+            <div className={`${getWidgetValueSize(widget.size)} text-foreground ${isCompact ? 'mb-2' : 'mb-4'}`}>{activeProjects.length}</div>
+            <div className="space-y-3">
+              {activeProjects.slice(0, isCompact ? 2 : isExpanded ? 4 : 3).map((project) => {
+                const timelineProgress = calculateTimelineProgress(project)
+                const isOnTrack = project.progress >= timelineProgress - 10 // 10% tolerance
+                return (
+                  <div key={project.id} className={`${isCompact ? 'p-1' : 'p-3'} rounded-lg border border-slate-100 hover:bg-secondary/30 transition-colors cursor-pointer group`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex-1 min-w-0">
+                        <span className={`${isCompact ? 'text-xs' : 'text-sm'} font-medium text-foreground truncate block`}>
+                          {isCompact ? project.name.split(' ').slice(0, 2).join(' ') : project.name}
+                        </span>
+                        {!isCompact && (
+                          <span className="text-xs text-muted-foreground">{project.location}</span>
+                        )}
+                      </div>
+                      <Badge className={`${isOnTrack ? 'bg-green-100 text-green-700 border-green-200' : 'bg-amber-100 text-amber-700 border-amber-200'} border text-xs px-2 py-1 font-medium`}>
+                        {isOnTrack ? 'On Track' : 'Behind'}
+                      </Badge>
+                    </div>
+                    
                     {!isCompact && (
-                      <span className="text-xs text-muted-foreground">{project.location}</span>
+                      <div className="space-y-1">
+                        {/* Project Progress */}
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Project Progress</span>
+                          <span>{project.progress}%</span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500" 
+                            style={{ width: `${project.progress}%` }}
+                          />
+                        </div>
+                        
+                        {/* Timeline Progress */}
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Time Elapsed</span>
+                          <span>{timelineProgress}%</span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isOnTrack 
+                                ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                                : 'bg-gradient-to-r from-amber-500 to-orange-500'
+                            }`}
+                            style={{ width: `${timelineProgress}%` }}
+                          />
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <Badge className={`${getStatusColor(project.status)} border ${isCompact ? 'text-xs px-1 py-0.5' : 'text-xs px-2 py-1'} font-medium`}>
-                    {project.progress}%
-                  </Badge>
-                </div>
-              ))}
+                )
+              })}
             </div>
+            
+            {!isCompact && (
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <Button variant="outline" size="sm" className="w-full text-xs h-8 hover:bg-secondary/50">
+                  📝 Edit Project Timelines
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )

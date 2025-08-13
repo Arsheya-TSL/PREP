@@ -17,8 +17,7 @@ export default function AppSidebar({ activeTab, setActiveTab, mode }: AppSidebar
     { id: "itt-manager", label: "ITT Manager", icon: FileText },
     { id: "cost-system", label: "Cost System", icon: DollarSign },
     { id: "teams", label: "Teams", icon: MessageSquare },
-    { id: "world-map", label: "World Map", icon: Globe },
-    { id: "world-map-v2", label: "World Map V2", icon: Globe },
+    { id: "world-map", label: "World Map", icon: Globe, disabled: true },
     { id: "settings", label: "Settings", icon: Settings },
   ]
 
@@ -33,10 +32,17 @@ export default function AppSidebar({ activeTab, setActiveTab, mode }: AppSidebar
         <div className="border-b border-neutral-200 px-3 py-6 bg-white">
           <div className="flex justify-center">
             <img
-              src="/_next/static/media/tsl_icon.png"
+              src="/_next/static/media/tsl%20icon.png"
               alt="TSL Logo"
               className="h-14 w-auto"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              }}
             />
+            <div className="h-14 w-14 bg-blue-600 rounded-lg flex items-center justify-center hidden">
+              <span className="text-white font-bold text-lg">TSL</span>
+            </div>
           </div>
         </div>
 
@@ -44,22 +50,25 @@ export default function AppSidebar({ activeTab, setActiveTab, mode }: AppSidebar
         <div className="flex-1 py-4">
           <div className="px-3">
             <nav className="space-y-2">
-              {menuItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id as PageType)}
-                  className={`
-                    w-full flex justify-center px-3 py-3 rounded-xl transition-all duration-200
-                    ${activeTab === item.id 
+                          {menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => !item.disabled && setActiveTab(item.id as PageType)}
+                className={`
+                  w-full flex justify-center px-3 py-3 rounded-xl transition-all duration-200
+                  ${item.disabled 
+                    ? 'text-neutral-300 opacity-50 cursor-not-allowed' 
+                    : activeTab === item.id 
                       ? 'bg-blue-100 text-blue-700' 
                       : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-800'
-                    }
-                  `}
-                  title={item.label}
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                </button>
-              ))}
+                  }
+                `}
+                title={item.label}
+                disabled={item.disabled}
+              >
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+              </button>
+            ))}
             </nav>
           </div>
         </div>
@@ -73,10 +82,17 @@ export default function AppSidebar({ activeTab, setActiveTab, mode }: AppSidebar
       <div className="border-b border-neutral-200 px-6 py-6 bg-white">
         <div className="flex items-center gap-3">
           <img
-            src="/_next/static/media/tsl_icon.png"
+            src="/_next/static/media/tsl%20icon.png"
             alt="TSL Logo"
             className="h-12 w-auto"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
           />
+          <div className="h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center hidden">
+            <span className="text-white font-bold text-sm">TSL</span>
+          </div>
           {!isCollapsed && (
             <div>
               <span className="font-bold text-xl text-neutral-800">PREP</span>
@@ -99,16 +115,19 @@ export default function AppSidebar({ activeTab, setActiveTab, mode }: AppSidebar
             {menuItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id as PageType)}
+                onClick={() => !item.disabled && setActiveTab(item.id as PageType)}
                 className={`
                   w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200
-                  ${activeTab === item.id 
-                    ? 'bg-blue-100 text-blue-700 font-medium' 
-                    : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-800'
+                  ${item.disabled 
+                    ? 'text-neutral-300 opacity-50 cursor-not-allowed' 
+                    : activeTab === item.id 
+                      ? 'bg-blue-100 text-blue-700 font-medium' 
+                      : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-800'
                   }
                   ${isCollapsed ? 'justify-center' : ''}
                 `}
                 title={isCollapsed ? item.label : undefined}
+                disabled={item.disabled}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
                 {!isCollapsed && (

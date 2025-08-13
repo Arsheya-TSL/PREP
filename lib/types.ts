@@ -1,5 +1,5 @@
 export type WidgetSize = 'small' | 'medium' | 'large' | 'extra-large'
-export type PageType = 'dashboard' | 'projects' | 'supply-chain' | 'itt-manager' | 'cost-system' | 'world-map' | 'world-map-v2'
+export type PageType = 'dashboard' | 'projects' | 'supply-chain' | 'itt-manager' | 'cost-system' | 'world-map'
 export type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly'
 
 export interface Project {

@@ -29,6 +29,7 @@ import { Plus } from "lucide-react"
 import WidgetChooserModal from "../modals/WidgetChooserModal"
 import { monthlyData } from "../../lib/constants"
 import TypeToCreateWidgetModal from "../modals/TypeToCreateWidgetModal"
+import EditProjectModal from "../modals/EditProjectModal"
 
 // -----------------------------
 // Types
@@ -90,9 +91,9 @@ const BASE = {
   active: 6,
   kpis: { onTime: 83, completion: 65, risk: 79 },
   projects: [
-    { name: "Waterfront Office Complex", location: "London, UK", progress: 75 },
-    { name: "City Hospital Extension", location: "Manchester, UK", progress: 45 },
-    { name: "Metro Station Upgrade", location: "Berlin, Germany", progress: 92 },
+    { id: 1, name: "Waterfront Office Complex", location: "London, UK", progress: 75 },
+    { id: 2, name: "City Hospital Extension", location: "Manchester, UK", progress: 45 },
+    { id: 3, name: "Metro Station Upgrade", location: "Berlin, Germany", progress: 92 },
   ],
   deadlines: [
     { title: "Final Inspection", project: "Metro Station Upgrade", tag: "High", remaining: "3d" },
@@ -120,7 +121,7 @@ const BASE = {
   ],
 }
 
-function aggregate(range: GlobalRange) {
+function aggregate(range: GlobalRange, projects?: any[]) {
   const factor = range === "Monthly" ? 1 : range === "Quarterly" ? 1.15 : range === "Yearly" ? 1.35 : 1.05
   const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)))
   return {
@@ -132,7 +133,7 @@ function aggregate(range: GlobalRange) {
       completion: clamp(BASE.kpis.completion + (factor - 1) * 10),
       risk: clamp(BASE.kpis.risk - (factor - 1) * 5),
     },
-    projects: BASE.projects,
+    projects: projects || BASE.projects,
     deadlines: BASE.deadlines,
     suppliers: BASE.suppliers,
     insights: BASE.insights,
@@ -144,7 +145,7 @@ function aggregate(range: GlobalRange) {
 // Default widget configurations
 // -----------------------------
 const DEFAULT_WIDGETS: WidgetConfig[] = [
-  { id: "total-projects", title: "Total Projects", area: "projects", size: "xl", enabled: true, order: 1 },
+  { id: "total-projects", title: "Total Live Tenders", area: "projects", size: "xl", enabled: true, order: 1 },
   { id: "active-projects", title: "Active Projects", area: "projects", size: "lg", enabled: true, order: 2 },
   { id: "kpis", title: "Active Project KPIs", area: "analytics", size: "lg", enabled: true, order: 3 },
   { id: "budget-vs-spend", title: "Budget vs Spend", area: "financial", size: "xl", enabled: true, order: 4 },
@@ -181,6 +182,10 @@ interface DashboardState {
   removeAIWidget: (id: string) => void
   // Utility Widget support
   addUtilityWidget: (definition: any) => void
+  // Project management
+  projects: any[]
+  setProjects: (projects: any[]) => void
+  updateProject: (updatedProject: any) => void
 }
 
 const STORAGE_KEY = "prep.dashboard.v5"
@@ -249,6 +254,16 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     set((state) => ({
       widgets: [...state.widgets, newWidget],
       hasUnsavedChanges: true
+    }))
+  },
+  // Project management
+  projects: BASE.projects,
+  setProjects: (projects) => set({ projects }),
+  updateProject: (updatedProject) => {
+    set((state) => ({
+      projects: state.projects.map(p => 
+        p.id === updatedProject.id ? updatedProject : p
+      )
     }))
   }
 }))
@@ -764,29 +779,67 @@ function TotalProjects({ size, data }: { size: WidgetSize; data: ReturnType<type
   const big = size === "xl" || size === "lg"
   const countClass = big ? "text-3xl md:text-4xl" : "text-2xl"
   
+  // Calculate live tenders data (mock data for now)
+  const totalTenders = 28
+  const activeTenders = 15
+  const completedTenders = 13
+  const yearlyProgress = Math.round((totalTenders / 50) * 100) // Assuming target of 50 tenders/year
+  
+  // Mock country breakdown (top 3)
+  const topCountries = [
+    { country: 'UK', count: 12 },
+    { country: 'Germany', count: 8 },
+    { country: 'France', count: 5 }
+  ]
+  
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-sm font-semibold text-neutral-600">Total Projects</h3>
-          {!compact && <p className="text-xs text-neutral-500">monthly view</p>}
+          <h3 className="text-sm font-semibold text-neutral-600">Total Live Tenders</h3>
+          {!compact && <p className="text-xs text-neutral-500">Active ITTs across all projects</p>}
         </div>
-        <span className="text-2xl">🏢</span>
+        <span className="text-2xl">📄</span>
       </div>
       <div className="mb-4">
         <div className={`${countClass} font-bold text-neutral-800`}>
-          {compact ? formatNumberCompact(data.totalProjects) : data.totalProjects}
+          {compact ? formatNumberCompact(totalTenders) : totalTenders}
         </div>
-        {!compact && <div className="flex items-center text-sm text-green-600 mt-1">↗ +12% from last month</div>}
+        {!compact && <div className="flex items-center text-sm text-green-600 mt-1">↗ +{activeTenders} active this month</div>}
       </div>
       {!compact && (
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-neutral-600">{data.completed} completed</span>
-            <span className="text-neutral-600">{data.active} active</span>
+        <div className="space-y-3">
+          {/* Yearly Progress */}
+          <div>
+            <div className="flex justify-between text-xs text-neutral-500 mb-1">
+              <span>Yearly Progress</span>
+              <span>{yearlyProgress}%</span>
+            </div>
+            <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-blue-500 to-blue-600" 
+                style={{ width: `${Math.min(yearlyProgress, 100)}%` }} 
+              />
+            </div>
           </div>
-          <div className="w-full h-3 bg-neutral-200 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-green-500 to-green-600" style={{ width: `${(data.completed / data.totalProjects) * 100}%` }} />
+          
+          {/* Top Countries */}
+          <div className="space-y-1">
+            <div className="text-xs text-neutral-500 mb-2">Top Regions</div>
+            {topCountries.map(({ country, count }) => (
+              <div key={country} className="flex items-center justify-between">
+                <span className="text-xs font-medium text-neutral-800">{country}</span>
+                <div className="flex items-center gap-2 flex-1 mx-2">
+                  <div className="flex-1 h-1 bg-neutral-100 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full" 
+                      style={{ width: `${(count / totalTenders) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-neutral-500 w-4">{count}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -794,54 +847,114 @@ function TotalProjects({ size, data }: { size: WidgetSize; data: ReturnType<type
   )
 }
 
-function ActiveProjects({ size, data }: { size: WidgetSize; data: ReturnType<typeof aggregate> }) {
+function ActiveProjects({ size, data, onEditClick }: { size: WidgetSize; data: ReturnType<typeof aggregate>; onEditClick?: (project: any) => void }) {
   const items = size === "sm" ? data.projects.slice(0, 1) : size === "md" ? data.projects.slice(0, 2) : data.projects
   const compact = size === "sm"
+  
+  // Calculate timeline progress for projects
+  const calculateTimelineProgress = (project: any) => {
+    const startDate = new Date('2024-01-01') // Mock start date
+    const endDate = new Date('2024-12-31') // Mock end date
+    const currentDate = new Date()
+    const totalDuration = endDate.getTime() - startDate.getTime()
+    const elapsedTime = currentDate.getTime() - startDate.getTime()
+    const timelineProgress = Math.min(100, Math.max(0, (elapsedTime / totalDuration) * 100))
+    return Math.round(timelineProgress)
+  }
   
   return (
     <div className={compact ? "pt-6" : ""}>
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-neutral-600">Active Projects</h3>
-          {!compact && <p className="text-xs text-neutral-500">Currently in progress</p>}
+          {!compact && <p className="text-xs text-neutral-500">Timeline progress vs planned</p>}
         </div>
-        <span className="text-2xl">📋</span>
+        <span className="text-2xl">📅</span>
       </div>
       <div className="space-y-3">
-        {items.map((p) => (
-          <div key={p.name} className="p-3 hover:bg-neutral-50 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-neutral-800 truncate">{p.name}</div>
-                {!compact && <div className="text-xs text-neutral-500">{p.location}</div>}
+        {items.map((p) => {
+          const timelineProgress = calculateTimelineProgress(p)
+          const isOnTrack = p.progress >= timelineProgress - 10 // 10% tolerance
+          return (
+            <div key={p.name} className="p-3 hover:bg-neutral-50 rounded-lg border border-neutral-100 cursor-pointer group">
+              <div className="flex items-center justify-between mb-2">
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-neutral-800 truncate">{p.name}</div>
+                  {!compact && <div className="text-xs text-neutral-500">{p.location}</div>}
+                </div>
+                <span
+                  className={`ml-4 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                    isOnTrack
+                      ? "bg-green-100 text-green-700 border border-green-200"
+                      : "bg-amber-100 text-amber-700 border border-amber-200"
+                  }`}
+                >
+                  {isOnTrack ? 'On Track' : 'Behind'}
+                </span>
               </div>
-              <span
-                className={`ml-4 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  p.progress >= 90
-                    ? "bg-green-100 text-green-800"
-                    : p.progress >= 70
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-neutral-100 text-neutral-800"
-                }`}
-              >
-                {p.progress}%
-              </span>
+              
+              {!compact && (
+                <div className="space-y-2">
+                  {/* Project Progress */}
+                  <div>
+                    <div className="flex justify-between text-xs text-neutral-500 mb-1">
+                      <span>Project Progress</span>
+                      <span>{p.progress}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500" 
+                        style={{ width: `${p.progress}%` }} 
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Timeline Progress */}
+                  <div>
+                    <div className="flex justify-between text-xs text-neutral-500 mb-1">
+                      <span>Time Elapsed</span>
+                      <span>{timelineProgress}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isOnTrack 
+                            ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                            : 'bg-gradient-to-r from-amber-500 to-orange-500'
+                        }`}
+                        style={{ width: `${timelineProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {compact && (
+                <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full ${
+                      isOnTrack
+                        ? "bg-gradient-to-r from-green-500 to-green-600"
+                        : "bg-gradient-to-r from-amber-500 to-orange-500"
+                    }`} 
+                    style={{ width: `${p.progress}%` }} 
+                  />
+                </div>
+              )}
             </div>
-            <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
-              <div 
-                className={`h-full rounded-full ${
-                  p.progress >= 90
-                    ? "bg-gradient-to-r from-green-500 to-green-600"
-                    : p.progress >= 70
-                    ? "bg-gradient-to-r from-blue-500 to-blue-600"
-                    : "bg-gradient-to-r from-neutral-500 to-neutral-600"
-                }`} 
-                style={{ width: `${p.progress}%` }} 
-              />
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
+      {!compact && (
+        <div className="mt-4 pt-3 border-t border-neutral-100">
+          <button 
+            onClick={() => onEditClick?.(items[0])} // Open modal with first project for demo
+            className="w-full px-3 py-2 text-xs text-neutral-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-neutral-200 hover:border-blue-200 transition-all duration-200 font-medium"
+          >
+            📝 Edit Project Timelines
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -1269,7 +1382,7 @@ function PerformanceAnalytics({ size, data }: { size: WidgetSize; data: ReturnTy
 // -----------------------------
 // Widget Registry
 // -----------------------------
-function RenderWidget({ widget, data }: { widget: WidgetConfig; data: ReturnType<typeof aggregate> }) {
+function RenderWidget({ widget, data, onEditProject }: { widget: WidgetConfig; data: ReturnType<typeof aggregate>; onEditProject?: (project: any) => void }) {
   // Handle AI-generated widgets
   if (widget.id.startsWith('ai-widget-') && widget.definition) {
     // Import WidgetPreview dynamically to avoid circular dependencies
@@ -1319,7 +1432,7 @@ function RenderWidget({ widget, data }: { widget: WidgetConfig; data: ReturnType
     case "total-projects":
       return <TotalProjects size={widget.size} data={data} />
     case "active-projects":
-      return <ActiveProjects size={widget.size} data={data} />
+      return <ActiveProjects size={widget.size} data={data} onEditClick={onEditProject} />
     case "kpis":
       return <KPIs size={widget.size} data={data} />
     case "budget-vs-spend":
@@ -1348,7 +1461,7 @@ function RenderWidget({ widget, data }: { widget: WidgetConfig; data: ReturnType
 // -----------------------------
 // iPhone-style Dashboard Grid
 // -----------------------------
-function DashboardGrid({ widgets, data }: { widgets: WidgetConfig[]; data: ReturnType<typeof aggregate> }) {
+function DashboardGrid({ widgets, data, onEditProject }: { widgets: WidgetConfig[]; data: ReturnType<typeof aggregate>; onEditProject?: (project: any) => void }) {
   const { editMode, setWidgets } = useDashboardStore()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
@@ -1476,7 +1589,7 @@ function DashboardGrid({ widgets, data }: { widgets: WidgetConfig[]; data: Retur
                 }}
               >
                 <WidgetFrame widget={widget}>
-                  <RenderWidget widget={widget} data={data} />
+                  <RenderWidget widget={widget} data={data} onEditProject={onEditProject} />
                 </WidgetFrame>
               </div>
             )
@@ -1513,7 +1626,7 @@ function DashboardGrid({ widgets, data }: { widgets: WidgetConfig[]; data: Retur
                 `}
               >
                 <WidgetFrame widget={widget}>
-                  <RenderWidget widget={widget} data={data} />
+                  <RenderWidget widget={widget} data={data} onEditProject={onEditProject} />
                 </WidgetFrame>
               </div>
             )
@@ -1547,7 +1660,9 @@ export default function DashboardPage() {
     setOriginalWidgets,
     setWidgets,
     addAIWidget,
-    addUtilityWidget
+    addUtilityWidget,
+    projects,
+    updateProject
   } = useDashboardStore()
   const [projectFilter, setProjectFilter] = useState("All Projects")
   const [isClient, setIsClient] = useState(false)
@@ -1555,6 +1670,8 @@ export default function DashboardPage() {
   // Modal state for widget creation
   const [showWidgetChooser, setShowWidgetChooser] = useState(false)
   const [showTypeToCreate, setShowTypeToCreate] = useState(false)
+  const [showEditProject, setShowEditProject] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<any>(null)
 
   // Client-side initialization
   useEffect(() => {
@@ -1578,7 +1695,7 @@ export default function DashboardPage() {
     }
   }, [editMode, widgets, setOriginalWidgets])
 
-  const data = useMemo(() => aggregate(range), [range])
+  const data = useMemo(() => aggregate(range, projects), [range, projects])
   const sorted = [...widgets].filter((w) => w.enabled).sort((a, b) => a.order - b.order)
 
   // Don't render until client-side initialization is complete
@@ -1613,7 +1730,14 @@ export default function DashboardPage() {
 
       {/* Grid with Edit Mode support */}
       <div className={editMode ? "pr-[420px]" : ""}>
-        <DashboardGrid widgets={sorted} data={data} />
+        <DashboardGrid 
+          widgets={sorted} 
+          data={data} 
+          onEditProject={(project) => {
+            setSelectedProject(project)
+            setShowEditProject(true)
+          }}
+        />
       </div>
 
       {/* Edit Side Panel */}
@@ -1643,12 +1767,27 @@ export default function DashboardPage() {
         }}
       />
       
-                   <TypeToCreateWidgetModal
-               isOpen={showTypeToCreate}
-               onClose={() => setShowTypeToCreate(false)}
-               onInsertWidget={addAIWidget}
-               onInsertUtilityWidget={addUtilityWidget}
-             />
+                         <TypeToCreateWidgetModal
+        isOpen={showTypeToCreate}
+        onClose={() => setShowTypeToCreate(false)}
+        onInsertWidget={addAIWidget}
+        onInsertUtilityWidget={addUtilityWidget}
+      />
+      
+      <EditProjectModal
+        isOpen={showEditProject}
+        onClose={() => {
+          setShowEditProject(false)
+          setSelectedProject(null)
+        }}
+        project={selectedProject}
+        onSave={(updatedProject) => {
+          console.log('Project updated:', updatedProject)
+          updateProject(updatedProject)
+          setShowEditProject(false)
+          setSelectedProject(null)
+        }}
+      />
     </div>
   )
 }

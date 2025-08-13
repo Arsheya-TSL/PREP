@@ -359,7 +359,7 @@ export const allWidgets: Widget[] = [
   { id: 'demo-showcase', title: 'System Showcase', category: 'analytics', enabled: true, order: 0, size: 'large', pages: ['dashboard'] },
   
   // Dashboard widgets
-  { id: 'total-projects', title: 'Total Projects', category: 'projects', enabled: true, order: 1, size: 'medium', pages: ['dashboard'] },
+  { id: 'total-projects', title: 'Total Live Tenders', category: 'itt', enabled: true, order: 1, size: 'medium', pages: ['dashboard'] },
   { id: 'active-projects', title: 'Active Projects', category: 'projects', enabled: true, order: 2, size: 'medium', pages: ['dashboard'] },
   { id: 'project-kpis', title: 'Active Project KPIs', category: 'projects', enabled: true, order: 3, size: 'large', pages: ['dashboard'] },
   { id: 'budget-vs-spend', title: 'Budget vs Spend', category: 'financial', enabled: true, order: 4, size: 'large', pages: ['dashboard', 'cost-system'] },

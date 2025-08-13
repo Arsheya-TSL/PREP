@@ -11,7 +11,7 @@ import SupplyChainPage from "./components/pages/SupplyChainPage"
 import ITTManagerPage from "./components/pages/ITTManagerPage"
 import ProjectsPage from "./components/pages/ProjectsPage"
 import WorldMapPage from "./components/pages/WorldMapPage"
-import WorldMapV2Page from "./components/pages/WorldMapV2Page"
+
 import SettingsPage from "./components/pages/SettingsPage"
 import CreateProjectModal from "./components/modals/CreateProjectModal"
 
@@ -116,9 +116,7 @@ export default function App() {
           <WorldMapPage />
         )}
 
-        {state.activeTab === "world-map-v2" && (
-          <WorldMapV2Page />
-        )}
+
 
         {/* Basic page for cost-system */}
         {state.activeTab === "cost-system" && (

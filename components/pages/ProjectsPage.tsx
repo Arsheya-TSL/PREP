@@ -8,7 +8,270 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
 import { ProjectFormData, TenderDraft } from "../../lib/types"
 import { projects, regionData } from "../../lib/constants"
-import WorldMap from "../WorldMap"
+
+// Working World Map Canvas Component (from WorldMapPage)
+function WorldMapCanvas() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedCountry, setSelectedCountry] = useState('')
+  const [countryData, setCountryData] = useState<any>(null)
+  const [is3D, setIs3D] = useState(false)
+  const chartRef = useRef<any>(null)
+  const lastTooltipRef = useRef<{ text: string; ts: number } | null>(null)
+  const lastDownRef = useRef<{ x: number; y: number; ts: number } | null>(null)
+  const justOpenedAtRef = useRef<number>(0)
+  const isDraggingRef = useRef<boolean>(false)
+
+  useEffect(() => {
+    if (!containerRef.current) return
+    try { console.log('[Map] useEffect mount - mode:', is3D ? '3D' : '2D') } catch {}
+
+    // Prepare container
+    containerRef.current.innerHTML = ''
+    const wrapper = document.createElement('div')
+    wrapper.style.position = 'relative'
+    wrapper.style.width = '100%'
+    wrapper.style.height = '500px' // Match the target height
+    wrapper.style.borderRadius = '12px'
+    wrapper.style.overflow = 'hidden'
+    wrapper.style.background = '#1a1a1a'
+
+    // Create chart div with unique ID to avoid conflicts
+    const uniqueId = 'chartdiv-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+    const chartDiv = document.createElement('div')
+    chartDiv.id = uniqueId
+    chartDiv.style.width = '100%'
+    chartDiv.style.height = '100%'
+    wrapper.appendChild(chartDiv)
+    containerRef.current.appendChild(wrapper)
+    
+    console.log('[Map] Created chart container with ID:', uniqueId)
+
+
+
+    // Load external script only once
+    const loadScript = (src: string) =>
+      new Promise<void>((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`) as HTMLScriptElement | null
+        if (existing) {
+          if ((window as any).am5viewer) return resolve()
+          existing.addEventListener('load', () => resolve())
+          existing.addEventListener('error', () => reject(new Error('Failed to load amCharts viewer')))
+          return
+        }
+        const script = document.createElement('script')
+        script.src = src
+        script.async = true
+        script.onload = () => resolve()
+        script.onerror = () => reject(new Error('Failed to load amCharts viewer'))
+        document.head.appendChild(script)
+      })
+
+    let disposed = false
+
+    const init = async () => {
+      try {
+        await loadScript('https://cdn.amcharts.com/lib/editor/map/5/viewer.js')
+        try { console.log('[Map] viewer.js loaded') } catch {}
+        if (disposed) return
+        
+        const am5viewer = (window as any).am5viewer
+        console.log('[Map] am5viewer object:', am5viewer)
+        console.log('[Map] am5viewer.create function:', typeof am5viewer?.create)
+        
+        if (!am5viewer) throw new Error('am5viewer not available')
+        if (typeof am5viewer.create !== 'function') throw new Error('am5viewer.create is not a function')
+
+        // Exact configuration from your working HTML
+        const config = {
+          settings: {
+            editor: {
+              themeTags: ['dark'],
+              userData: {
+                projection: is3D ? 'geoOrthographic' : 'geoMercator',
+                geodata: 'worldLow',
+                homeGeoPoint: is3D ? { longitude: 0, latitude: 0 } : undefined,
+              },
+            },
+            'editor.map': {
+              minZoomLevel: 0.8,
+              projection: is3D ? 'geoOrthographic' : 'geoMercator',
+              panX: 'rotateX',
+              ...(is3D
+                ? {
+                    panY: 'rotateY',
+                    rotationX: 0,
+                    rotationY: 0,
+                    homeZoomLevel: 1.0,
+                    homeGeoPoint: { longitude: 0, latitude: 0 },
+                  }
+                : {}),
+              zoomControl: {
+                type: 'ZoomControl',
+                settings: {
+                   visible: false,
+                  position: 'absolute',
+                  layout: { type: 'VerticalLayout' },
+                  themeTags: ['zoomtools'],
+                  layer: 30,
+                },
+              },
+              background: {
+                type: 'Rectangle',
+                settings: {
+                  fill: { type: 'Color', value: '#1a1a1a' },
+                  fillOpacity: 1,
+                  width: 1853,
+                  height: 916,
+                  x: 0,
+                  y: 0,
+                  fillPattern: {
+                    type: 'GrainPattern',
+                    settings: { maxOpacity: 0.08, density: 0.2, colors: [{ type: 'Color', value: '#aaaaaa' }] },
+                  },
+                  isMeasured: false,
+                },
+              },
+              themeTags: ['map'],
+              ...(is3D
+                ? { }
+                : { translateX: 926.5, translateY: 651.6032407502676 }),
+            },
+            'editor.pointTemplate': {
+              toggleKey: 'active',
+              centerX: { type: 'Percent', value: 50 },
+              centerY: { type: 'Percent', value: 50 },
+              tooltipText: '{name}',
+            },
+            'editor.polygonSeries': {
+              valueField: 'value',
+              calculateAggregates: true,
+              id: 'polygonseries',
+              exclude: ['AQ'],
+              geometryField: 'geometry',
+              geometryTypeField: 'geometryType',
+              idField: 'id',
+            },
+          },
+          data: {
+            'editor.polygonSeries': [
+              // Pre-populate with country color data
+              { id: 'GB', name: 'United Kingdom', fill: '#10B981', fillOpacity: 0.8 },
+              { id: 'UK', name: 'United Kingdom', fill: '#10B981', fillOpacity: 0.8 },
+              { id: 'DE', name: 'Germany', fill: '#3B82F6', fillOpacity: 0.8 },
+              { id: 'FR', name: 'France', fill: '#8B5CF6', fillOpacity: 0.8 },
+              { id: 'NL', name: 'Netherlands', fill: '#F59E0B', fillOpacity: 0.8 },
+              { id: 'ES', name: 'Spain', fill: '#EF4444', fillOpacity: 0.8 }
+            ],
+          },
+        } as any
+
+        // Create the map
+        console.log('[Map] Creating chart with config:', config)
+        console.log('[Map] Using container ID:', uniqueId)
+        const chart = am5viewer.create(uniqueId, config)
+        console.log('[Map] Chart created:', chart)
+        chartRef.current = chart
+        
+        if (!chart) {
+          console.error('[Map] Chart creation failed!')
+          return
+        }
+        
+        // Check if chart has root
+        console.log('[Map] Chart root:', chart.root)
+        
+        // Wait for chart to be ready
+        if (chart.root) {
+          chart.root.events.once('frameended', () => {
+            console.log('[Map] Chart frame ended - chart should be ready now')
+            console.log('[Map] Chart series:', chart.series)
+          })
+        }
+
+
+        
+        // Set up click handlers (simplified)
+        setTimeout(() => {
+          const container = document.getElementById(uniqueId)
+          if (container) {
+            container.addEventListener('click', (e) => {
+              const target = e.target as any
+              if (target?.tagName === 'path') {
+                const title = target.querySelector('title')?.textContent ||
+                            target.getAttribute('aria-label') ||
+                            'Unknown Country'
+                setSelectedCountry(title)
+                setCountryData({ mode: is3D ? '3D' : '2D' })
+                setIsModalOpen(true)
+              }
+            })
+          }
+        }, 1000)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
+    init()
+
+    return () => {
+      disposed = true
+      try {
+        const c = chartRef.current as any
+        if (c && typeof c.dispose === 'function') {
+          c.dispose()
+        }
+      } catch {}
+      chartRef.current = null
+      if (containerRef.current) containerRef.current.innerHTML = ''
+    }
+  }, [is3D])
+
+  return (
+    <div className="relative" style={{ height: '500px', backgroundColor: '#0a1426' }}>
+      <div ref={containerRef} className="w-full h-full" />
+      
+      {/* 3D Toggle Button */}
+      <button
+        onClick={() => {
+          setIsModalOpen(false)
+          setSelectedCountry('')
+          setCountryData(null)
+          setIs3D((v) => !v)
+        }}
+        className="absolute bottom-1 left-0.5 px-6 py-2 bg-gray-600 text-white text-base font-medium rounded-md shadow-md hover:bg-gray-700 transition-colors z-[1001]"
+      >
+        {is3D ? '2D' : '3D'}
+      </button>
+
+
+      
+      {/* Country Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4 transform scale-100 transition-transform duration-300">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-800">{selectedCountry}</h3>
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-gray-600">Regional information for {selectedCountry}</p>
+            <div className="mt-4">
+              <Button onClick={() => setIsModalOpen(false)} className="w-full">
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface ProjectsPageProps {
   comparisonProjects: number[]
@@ -99,6 +362,159 @@ export default function ProjectsPage({
   const filteredCountries = allCountries.filter(country => 
     country.toLowerCase().includes(countrySearch.toLowerCase())
   ).slice(0, 10) // Limit to 10 results for performance
+
+  // Pre-made projects (existing projects in progress)
+  const existingProjects = [
+    {
+      id: 'existing-1',
+      name: 'Waterfront Office Complex',
+      country: 'UK',
+      location: 'London, UK',
+      progress: 75,
+      score: 94,
+      status: 'On Track',
+      startDate: '2024-01-15',
+      endDate: '2024-12-20',
+      description: 'Modern 15-story office complex with sustainable design features',
+      budget: '£2.8M',
+      sizeBucket: '2000-10000',
+      team: 12,
+      suppliers: 8,
+      issues: 1,
+      image: '🏢'
+    },
+    {
+      id: 'existing-2',
+      name: 'City Hospital Extension',
+      country: 'UK',
+      location: 'Manchester, UK',
+      progress: 45,
+      score: 87,
+      status: 'On Track',
+      startDate: '2024-03-01',
+      endDate: '2025-06-30',
+      description: 'Critical care unit expansion with state-of-the-art medical facilities',
+      budget: '£4.2M',
+      sizeBucket: '10000-50000',
+      team: 18,
+      suppliers: 12,
+      issues: 0,
+      image: '🏥'
+    },
+    {
+      id: 'existing-3',
+      name: 'Metro Station Upgrade',
+      country: 'Germany',
+      location: 'Berlin, Germany',
+      progress: 92,
+      score: 96,
+      status: 'Ahead',
+      startDate: '2023-11-01',
+      endDate: '2024-08-15',
+      description: 'Complete renovation of central metro station with accessibility improvements',
+      budget: '€1.2M',
+      sizeBucket: '500-2000',
+      team: 8,
+      suppliers: 5,
+      issues: 1,
+      image: '🚇'
+    },
+    {
+      id: 'existing-4',
+      name: 'Cultural Center Restoration',
+      country: 'France',
+      location: 'Paris, France',
+      progress: 68,
+      score: 89,
+      status: 'On Track',
+      startDate: '2024-02-10',
+      endDate: '2024-11-30',
+      description: 'Historical building restoration preserving architectural heritage',
+      budget: '€950K',
+      sizeBucket: '500-2000',
+      team: 6,
+      suppliers: 4,
+      issues: 0,
+      image: '🏛️'
+    },
+    {
+      id: 'existing-5',
+      name: 'Green Housing Project',
+      country: 'Netherlands',
+      location: 'Amsterdam, Netherlands',
+      progress: 55,
+      score: 91,
+      status: 'On Track',
+      startDate: '2024-01-20',
+      endDate: '2025-02-28',
+      description: 'Sustainable residential complex with renewable energy systems',
+      budget: '€1.8M',
+      sizeBucket: '2000-10000',
+      team: 10,
+      suppliers: 7,
+      issues: 2,
+      image: '🏘️'
+    },
+    {
+      id: 'existing-6',
+      name: 'Port Expansion Phase 2',
+      country: 'Spain',
+      location: 'Barcelona, Spain',
+      progress: 38,
+      score: 85,
+      status: 'On Track',
+      startDate: '2024-04-01',
+      endDate: '2025-09-15',
+      description: 'Commercial port infrastructure expansion for increased cargo capacity',
+      budget: '€3.1M',
+      sizeBucket: '10000-50000',
+      team: 22,
+      suppliers: 15,
+      issues: 1,
+      image: '🚢'
+    }
+  ]
+
+
+
+  // Calculate dynamic regional stats
+  const calculateRegionalStats = () => {
+    const allProjects = [...existingProjects, ...userProjects]
+    const regionMap = new Map()
+
+    // Initialize with existing regions
+    regionData.forEach(region => {
+      regionMap.set(region.region, { ...region, activeProjects: 0 })
+    })
+
+    // Count projects by country
+    allProjects.forEach(project => {
+      const country = project.country
+      if (regionMap.has(country)) {
+        const current = regionMap.get(country)
+        regionMap.set(country, { 
+          ...current, 
+          activeProjects: current.activeProjects + 1,
+          color: current.color
+        })
+              } else {
+        // Add new countries
+        regionMap.set(country, {
+          region: country,
+          color: '#3B82F6', // Default blue
+          performance: 'Good',
+          projectsOnTime: 85,
+          avgITTResponse: 3,
+          supplierQuality: 4.2,
+          budgetUsage: 78,
+          activeProjects: 1,
+          totalProjects: 1
+        })
+      }
+    })
+
+    return Array.from(regionMap.values()).filter(region => region.activeProjects > 0)
+  }
 
     // Simple country info display instead of buggy globe
   const getCountryInfo = (country: string) => {
@@ -348,7 +764,7 @@ export default function ProjectsPage({
                                   ) : countrySearch ? (
                                     <div className="px-3 py-2 text-slate-500 text-sm">
                                       No countries found
-                                    </div>
+                  </div>
                                   ) : (
                                     <div className="px-3 py-2 text-slate-500 text-sm">
                                       Type to search...
@@ -410,7 +826,7 @@ export default function ProjectsPage({
                               value={projectFormData.endDate} 
                               onChange={(e) => setProjectFormData({ ...projectFormData, endDate: e.target.value })} 
                             />
-                          </div>
+                  </div>
                         </div>
                         
                         {/* Description below the 2x2 grid */}
@@ -440,7 +856,7 @@ export default function ProjectsPage({
                       
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
+                    <div className="space-y-2">
                             <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
                               📏 Project Size
                             </label>
@@ -482,9 +898,9 @@ export default function ProjectsPage({
                             placeholder="📋 Any special requirements, compliance needs, or additional notes..." 
                           />
                         </div>
-                      </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
                   {tenderStep === 3 && (
                     <div className="space-y-4">
@@ -493,7 +909,7 @@ export default function ProjectsPage({
                           🔧 Materials & Compliance
                         </h3>
                         <p className="text-slate-600 text-sm">Specify materials and compliance requirements</p>
-                      </div>
+                  </div>
                       
                       <div className="space-y-4">
                         <div className="space-y-3">
@@ -525,7 +941,7 @@ export default function ProjectsPage({
                             >
                               ➕ Add
                             </Button>
-                          </div>
+                </div>
                           
                           {projectFormData.materials.length > 0 && (
                             <div className="flex flex-wrap gap-2 p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200">
@@ -540,7 +956,7 @@ export default function ProjectsPage({
                                   </button>
                                 </span>
                               ))}
-                            </div>
+              </div>
                           )}
                         </div>
                         
@@ -830,16 +1246,26 @@ export default function ProjectsPage({
         </div>
       )}
 
-      {/* Your Projects */}
+             {/* New Projects Awaiting ITT Assignment */}
       {userProjects.length > 0 && (
+         <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6">
+           <div className="mb-4">
+             <h2 className="text-lg font-semibold text-neutral-800">🚀 New Projects - ITT Assignment Required</h2>
+             <p className="text-sm text-neutral-500">Recently created projects that need ITT assignment</p>
+           </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {userProjects.map((p) => (
-            <Card key={p.id} className="hover:shadow-md transition-shadow">
+               <Card key={p.id} className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="text-base leading-tight">{p.name}</CardTitle>
-                    <CardDescription className="text-sm">{p.country}</CardDescription>
+                       <CardDescription className="text-sm flex items-center gap-1">
+                         🌍 {p.country}
+                       </CardDescription>
+                     </div>
+                     <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                       New
                   </div>
                 </div>
               </CardHeader>
@@ -850,18 +1276,19 @@ export default function ProjectsPage({
                   <span>{p.sizeBucket || ''}</span>
                 </div>
                 <div className="flex items-center gap-2 pt-2">
-                  <Button variant="outline" className="h-9" onClick={() => {
+                     <Button variant="outline" className="h-9 w-full" onClick={() => {
                     setIttFormData && setIttFormData((prev: any) => ({ ...prev, project: p.name, region: (p.country || '').toLowerCase() }))
                     setActiveTab && setActiveTab('itt-manager')
                     setShowCreateITT && setShowCreateITT(true)
                   }}>
                     <FileText className="h-4 w-4 mr-2" />
-                    Add / Assign ITT
+                       Assign ITT
                   </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
+           </div>
         </div>
       )}
 
@@ -881,14 +1308,12 @@ export default function ProjectsPage({
           </div>
         </div>
         
-        <WorldMap 
-          projects={projects} 
-          regionData={regionData}
-        />
+        {/* Working amCharts World Map from WorldMapPage */}
+        <WorldMapCanvas />
         
         {/* Regional Stats Summary */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-5 gap-4">
-          {regionData.map((region) => (
+          {calculateRegionalStats().map((region) => (
             <div key={region.region} className="text-center p-4 bg-neutral-50 rounded-xl border border-neutral-200">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <div 
@@ -898,9 +1323,87 @@ export default function ProjectsPage({
                 <span className="font-semibold text-sm text-neutral-800">{region.region}</span>
               </div>
               <div className="text-xs text-neutral-500">
-                {region.activeProjects} active projects
+                {region.activeProjects} active project{region.activeProjects !== 1 ? 's' : ''}
               </div>
             </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Existing Projects In Progress */}
+      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6">
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-neutral-800">📋 Projects In Progress</h2>
+          <p className="text-sm text-neutral-500">Current active projects across all regions</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {existingProjects.map((project) => (
+            <Card key={project.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-2xl">{project.image}</div>
+                    <div>
+                      <CardTitle className="text-base leading-tight">{project.name}</CardTitle>
+                      <CardDescription className="text-sm">{project.location}</CardDescription>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className={`text-sm font-medium ${
+                      project.score >= 90 ? 'text-green-600' : 
+                      project.score >= 80 ? 'text-blue-600' : 
+                      project.score >= 70 ? 'text-yellow-600' : 'text-red-600'
+                    }`}>
+                      {project.score}/100
+                    </div>
+                    <div className="text-xs text-neutral-500">Score</div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm">Progress</span>
+                    <div className={`text-xs px-2 py-1 rounded-full ${
+                      project.status === 'On Track' ? 'bg-green-100 text-green-700' :
+                      project.status === 'Ahead' ? 'bg-blue-100 text-blue-700' :
+                      project.status === 'Delayed' ? 'bg-red-100 text-red-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {project.status}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 bg-neutral-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
+                        style={{ width: `${project.progress}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium">{project.progress}%</span>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center gap-1">
+                    <span className="text-neutral-500">👥</span>
+                    <span>{project.team}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-neutral-500">🏢</span>
+                    <span>{project.suppliers}</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <span className="text-xs text-neutral-500">Due: {project.endDate}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-neutral-500">Budget:</span>
+                    <span className="text-xs font-medium">{project.budget}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
