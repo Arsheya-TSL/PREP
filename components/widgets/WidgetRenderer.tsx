@@ -116,7 +116,7 @@ export default function WidgetRenderer({ widget, viewMode, setViewMode, screenSi
         return acc
       }, {} as Record<string, number>)
       const topCountries = Object.entries(countryStats)
-        .sort(([,a], [,b]) => b - a)
+        .sort(([,a], [,b]) => (b as number) - (a as number))
         .slice(0, 3)
       
       return (
@@ -166,20 +166,22 @@ export default function WidgetRenderer({ widget, viewMode, setViewMode, screenSi
                 {/* Top Countries */}
                 <div className="space-y-1">
                   <div className="text-xs text-muted-foreground mb-2">Top Regions</div>
-                  {topCountries.map(([country, count]) => (
+                  {topCountries.map(([country, count]) => {
+                    const countNum = count as number;
+                    return (
                     <div key={country} className="flex items-center justify-between">
                       <span className="text-xs font-medium text-foreground">{country}</span>
                       <div className="flex items-center gap-2 flex-1 mx-2">
                         <div className="flex-1 h-1 bg-secondary rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full" 
-                            style={{ width: `${(count / totalTenders) * 100}%` }}
+                            style={{ width: `${(countNum / totalTenders) * 100}%` }}
                           />
                         </div>
-                        <span className="text-xs text-muted-foreground w-4">{count}</span>
+                        <span className="text-xs text-muted-foreground w-4">{countNum}</span>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
             )}
