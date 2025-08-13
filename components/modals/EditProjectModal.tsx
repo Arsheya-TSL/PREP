@@ -66,7 +66,12 @@ export default function EditProjectModal({ isOpen, onClose, project, onSave }: E
 
   const [activeTab, setActiveTab] = useState<'details' | 'timeline' | 'team' | 'risks'>('details')
   const [newMilestone, setNewMilestone] = useState({ title: '', date: '', description: '' })
-  const [newRisk, setNewRisk] = useState({ title: '', level: 'medium' as const, description: '', mitigation: '' })
+  const [newRisk, setNewRisk] = useState<{ title: string; level: 'low' | 'medium' | 'high'; description: string; mitigation: string }>({ 
+    title: '', 
+    level: 'medium', 
+    description: '', 
+    mitigation: '' 
+  })
 
   useEffect(() => {
     if (project) {
@@ -482,7 +487,7 @@ export default function EditProjectModal({ isOpen, onClose, project, onSave }: E
                             />
                             <select
                               value={newRisk.level}
-                              onChange={(e) => setNewRisk(prev => ({ ...prev, level: e.target.value as Risk['level'] }))}
+                              onChange={(e) => setNewRisk(prev => ({ ...prev, level: e.target.value as 'low' | 'medium' | 'high' }))}
                               className="h-9 px-3 border border-red-200 rounded-md text-sm"
                             >
                               <option value="low">Low Risk</option>
