@@ -52,7 +52,7 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
   }, [mode, isMobile, setMode])
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50 overflow-x-hidden">
                            {/* Sidebar */}
         <aside 
           id="app-sidebar"
@@ -86,8 +86,8 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
          >
           {/* Header */}
           <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-neutral-200 shadow-sm">
-            <div className="flex items-center justify-between px-6 py-4">
-              <div className="flex items-center gap-6">
+            <div className="flex items-center justify-between px-6 py-4 flex-wrap gap-4">
+                             <div className="flex items-center gap-6 flex-wrap">
                 {/* Sidebar Toggle Button */}
                 <Button
                   variant="ghost"
@@ -105,14 +105,14 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
                   )}
                 </Button>
 
-                {/* Project Filter */}
-                <div className="w-48">
-                <select className="w-full h-11 px-3 text-sm bg-white border border-neutral-200 rounded-lg focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none">
-                  <option>All Projects</option>
-                  <option>Active Projects</option>
-                  <option>Completed Projects</option>
-                </select>
-              </div>
+                                 {/* Project Filter */}
+                 <div className="w-48">
+                 <select className="w-full h-11 px-3 text-sm bg-white border border-neutral-200 rounded-lg focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none shadow-sm">
+                   <option>All Projects</option>
+                   <option>Active Projects</option>
+                   <option>Completed Projects</option>
+                 </select>
+               </div>
 
               {/* Search */}
               {!isMobile && (
@@ -127,16 +127,16 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
               )}
             </div>
 
-            <div className="flex items-center gap-4">
-              {/* Date Range */}
-              <div className="w-48">
-                <select className="w-full h-11 px-3 text-sm bg-white border border-neutral-200 rounded-lg focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none">
-                  <option>Monthly view</option>
-                  <option>Quarterly view</option>
-                  <option>Yearly view</option>
-                  <option>Custom view</option>
-                </select>
-              </div>
+                         <div className="flex items-center gap-4 flex-wrap">
+                             {/* Date Range */}
+               <div className="w-48">
+                 <select className="w-full h-11 px-3 text-sm bg-white border border-neutral-200 rounded-lg focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none shadow-sm">
+                   <option>Monthly view</option>
+                   <option>Quarterly view</option>
+                   <option>Yearly view</option>
+                   <option>Custom view</option>
+                 </select>
+               </div>
 
                              {/* Customize Button */}
                <Button 
@@ -171,8 +171,12 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
         </header>
 
         {/* Page Content */}
-        <main className="max-w-screen-2xl mx-auto px-6 py-6">
-          {children}
+        <main className={`py-6 pb-8 transition-all duration-300 ease-out ${
+          mode === 'expanded' ? 'px-6' : 'px-8'
+        }`}>
+          <div className="min-h-[calc(100vh-120px)]">
+            {children}
+          </div>
         </main>
       </div>
     </div>

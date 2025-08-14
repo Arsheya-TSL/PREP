@@ -329,6 +329,10 @@ export default function ProjectsPage({
   const [showCountryDropdown, setShowCountryDropdown] = useState(false)
   const previewRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<any>(null)
+  
+  // All regions modal state
+  const [showAllRegionsModal, setShowAllRegionsModal] = useState(false)
+  const [regionSearch, setRegionSearch] = useState("")
 
   // Comprehensive list of all countries
   const allCountries = [
@@ -1311,30 +1315,74 @@ export default function ProjectsPage({
         {/* Working amCharts World Map from WorldMapPage */}
         <WorldMapCanvas />
         
-        {/* Regional Stats Summary */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-5 gap-4">
-          {calculateRegionalStats().map((region) => (
-            <div key={region.region} className="text-center p-4 bg-neutral-50 rounded-xl border border-neutral-200">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <div 
-                  className="w-3 h-3 rounded-full" 
-                  style={{ backgroundColor: region.color }}
-                />
-                <span className="font-semibold text-sm text-neutral-800">{region.region}</span>
-              </div>
-              <div className="text-xs text-neutral-500">
-                {region.activeProjects} active project{region.activeProjects !== 1 ? 's' : ''}
-              </div>
+        {/* Compact Regional Stats Summary */}
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-neutral-700">Regional Overview</h3>
+            <div className="flex items-center gap-2 text-xs text-neutral-500">
+              <span>{calculateRegionalStats().reduce((sum, region) => sum + region.activeProjects, 0)} total projects</span>
+              <span>•</span>
+              <span>{calculateRegionalStats().length} regions</span>
             </div>
-          ))}
+          </div>
+          
+          {/* Compact Grid - Show top 8 regions by default */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+            {calculateRegionalStats()
+              .sort((a, b) => b.activeProjects - a.activeProjects)
+              .slice(0, 8)
+              .map((region) => (
+              <div key={region.region} className="bg-white rounded-lg border border-neutral-200 p-3 hover:shadow-sm transition-all duration-200 hover:border-neutral-300">
+                <div className="flex items-center justify-between mb-2">
+                  <div 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ backgroundColor: region.color }}
+                  />
+                  <span className="text-xs font-medium text-neutral-700">{region.activeProjects}</span>
+                </div>
+                <div className="text-xs text-neutral-600 truncate" title={region.region}>
+                  {region.region}
+                </div>
+                {region.projectsOnTime && (
+                  <div className="text-xs text-green-600 mt-1">
+                    {region.projectsOnTime}% on time
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          
+          {/* View All Button - Show if more than 8 regions */}
+          {calculateRegionalStats().length > 8 && (
+            <div className="mt-3 text-center">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 px-4 text-xs border-neutral-200 hover:bg-neutral-50"
+                onClick={() => setShowAllRegionsModal(true)}
+              >
+                View All {calculateRegionalStats().length} Regions
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Existing Projects In Progress */}
       <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6">
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-neutral-800">📋 Projects In Progress</h2>
-          <p className="text-sm text-neutral-500">Current active projects across all regions</p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold text-neutral-800">📋 Projects In Progress</h2>
+            <p className="text-sm text-neutral-500">Current active projects across all regions</p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-9 px-3 rounded-lg border-neutral-200 hover:bg-neutral-100"
+            onClick={() => window.open('https://google.com', '_blank')}
+          >
+            View All
+          </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {existingProjects.map((project) => (
@@ -1407,6 +1455,123 @@ export default function ProjectsPage({
           ))}
         </div>
       </div>
+
+      {/* All Regions Modal */}
+      <Dialog open={showAllRegionsModal} onOpenChange={setShowAllRegionsModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              🌍 All Regions ({calculateRegionalStats().length})
+            </DialogTitle>
+            <DialogDescription>
+              Browse and filter all regions with active projects
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Search Bar */}
+          <div className="mb-4">
+            <Input
+              placeholder="Search regions..."
+              value={regionSearch}
+              onChange={(e) => setRegionSearch(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          
+          {/* Regions Grid */}
+          <div className="overflow-y-auto max-h-[60vh]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {calculateRegionalStats()
+                .filter(region => 
+                  region.region.toLowerCase().includes(regionSearch.toLowerCase())
+                )
+                .sort((a, b) => b.activeProjects - a.activeProjects)
+                .map((region) => (
+                <div key={region.region} className="bg-white rounded-lg border border-neutral-200 p-4 hover:shadow-md transition-all duration-200 hover:border-neutral-300">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full shadow-sm" 
+                        style={{ backgroundColor: region.color }}
+                      />
+                      <span className="font-semibold text-sm text-neutral-800">{region.region}</span>
+                    </div>
+                    <div className="text-xs bg-neutral-100 text-neutral-600 px-2 py-1 rounded-full">
+                      {region.activeProjects}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-neutral-500">Active Projects</span>
+                      <span className="font-medium text-neutral-700">{region.activeProjects}</span>
+                    </div>
+                    
+                    {region.totalProjects && region.totalProjects > region.activeProjects && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-neutral-500">Total Projects</span>
+                        <span className="font-medium text-neutral-700">{region.totalProjects}</span>
+                      </div>
+                    )}
+                    
+                    {region.projectsOnTime && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-neutral-500">On Time</span>
+                        <span className="font-medium text-green-600">{region.projectsOnTime}%</span>
+                      </div>
+                    )}
+                    
+                    {region.budgetUsage && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-neutral-500">Budget Usage</span>
+                        <span className="font-medium text-blue-600">{region.budgetUsage}%</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {region.performance && (
+                    <div className="mt-3 pt-2 border-t border-neutral-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-neutral-500">Performance</span>
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          region.performance === 'Excellent' ? 'bg-green-100 text-green-700' :
+                          region.performance === 'Great' ? 'bg-blue-100 text-blue-700' :
+                          region.performance === 'Good' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-neutral-100 text-neutral-700'
+                        }`}>
+                          {region.performance}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Summary Stats */}
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+            <div className="text-center">
+              <div className="text-lg font-bold text-blue-600">
+                {calculateRegionalStats().reduce((sum, region) => sum + region.activeProjects, 0)}
+              </div>
+              <div className="text-xs text-blue-700">Total Active Projects</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-green-600">
+                {Math.round(calculateRegionalStats().reduce((sum, region) => sum + (region.projectsOnTime || 0), 0) / calculateRegionalStats().length)}%
+              </div>
+              <div className="text-xs text-green-700">Avg On-Time Rate</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-purple-600">
+                {calculateRegionalStats().length}
+              </div>
+              <div className="text-xs text-purple-700">Active Regions</div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

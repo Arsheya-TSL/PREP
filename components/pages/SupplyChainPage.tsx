@@ -1,20 +1,36 @@
 import { useState } from "react"
-import { Plus, Filter, Search, BarChart3, Grid3X3, List, Star, Award, MapPin, Clock, CheckCircle, Package, Truck, TrendingUp, Eye, Users2, Zap } from "lucide-react"
+import { Plus, Filter, Search, BarChart3, Grid3X3, List, Star, Award, MapPin, Clock, CheckCircle, Package, Truck, TrendingUp, Eye, Users2, Zap, X } from "lucide-react"
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core"
+import {
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable"
+import { useDashboardStore, WidgetFrame } from "./DashboardPage"
+import EditSidePanel from "../layout/EditSidePanel"
 import { Button } from "../ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
 import { Input } from "../ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
-import { Badge } from "../ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog"
-import { Separator } from "../ui/separator"
-import { Checkbox } from "../ui/checkbox"
-import { Avatar, AvatarFallback } from "../ui/avatar"
+import { Badge } from "../ui/badge"
 import { Progress } from "../ui/progress"
-import { Widget, PageType } from "../../lib/types"
-import { getResponsiveGridCols, formatLargeCurrency, getStatusColor } from "../../lib/utils"
-import { supplierPerformanceData } from "../../lib/constants"
+import { Avatar, AvatarFallback } from "../ui/avatar"
+import { Checkbox } from "../ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
+import { DialogTrigger } from "../ui/dialog"
 import DraggableWidget from "../layout/DraggableWidget"
+import { Widget, PageType } from "../../lib/types"
+import { supplierPerformanceData } from "../../lib/constants"
 import WidgetRenderer from "../widgets/WidgetRenderer"
 
 interface SupplyChainPageProps {
@@ -23,6 +39,7 @@ interface SupplyChainPageProps {
   moveWidget: (dragIndex: number, dropIndex: number) => void
   updateWidgetSize: (widgetId: string, size: 'small' | 'medium' | 'large' | 'extra-large') => void
   customizeMode: boolean
+  setCustomizeMode: (mode: boolean) => void
   supplierViewMode: 'list' | 'card'
   setSupplierViewMode: (mode: 'list' | 'card') => void
   supplierComparison: string[]
@@ -32,526 +49,639 @@ interface SupplyChainPageProps {
   screenSize: 'mobile' | 'tablet' | 'desktop'
 }
 
-export default function SupplyChainPage({
-  widgets,
-  getPageWidgets,
+// Supply Chain Grid with Drag-and-Drop
+function SupplyChainGrid({ 
+  widgets, 
+  updateWidget, 
   moveWidget,
-  updateWidgetSize,
-  customizeMode,
-  supplierViewMode,
-  setSupplierViewMode,
+  filteredSuppliers,
+  searchQuery,
+  setSearchQuery,
+  filterCategory,
+  setFilterCategory,
+  filterRegion,
+  setFilterRegion,
   supplierComparison,
   toggleSupplierComparison,
-  showSupplierComparison,
-  setShowSupplierComparison,
-  screenSize
-}: SupplyChainPageProps) {
+  customizeMode,
+  screenSize,
+  updateWidgetSize,
+  moveWidgetProp
+}: { 
+  widgets: any[]
+  updateWidget: (id: string, updates: any) => void
+  moveWidget: (id: string, direction: -1 | 1) => void
+  filteredSuppliers: any[]
+  searchQuery: string
+  setSearchQuery: (query: string) => void
+  filterCategory: string
+  setFilterCategory: (category: string) => void
+  filterRegion: string
+  setFilterRegion: (region: string) => void
+  supplierComparison: string[]
+  toggleSupplierComparison: (name: string) => void
+  customizeMode: boolean
+  screenSize: 'mobile' | 'tablet' | 'desktop'
+  updateWidgetSize: (widgetId: string, size: 'small' | 'medium' | 'large' | 'extra-large') => void
+  moveWidgetProp: (dragIndex: number, dropIndex: number) => void
+}) {
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+  const [forceUpdate, setForceUpdate] = useState(0)
+  const [showFullScreenSuppliers, setShowFullScreenSuppliers] = useState(false)
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const getColSpan = (size: string) => {
+    switch (size) {
+      case 'sm': return 3
+      case 'md': return 4
+      case 'lg': return 6
+      case 'xl': return 12
+      default: return 4
+    }
+  }
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string)
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    
+    setActiveId(null)
+    setDragOverId(null)
+
+    if (active.id !== over?.id && over) {
+      const oldIndex = widgets.findIndex((item) => item.id === active.id)
+      const newIndex = widgets.findIndex((item) => item.id === over.id)
+
+      if (oldIndex !== newIndex && oldIndex !== -1 && newIndex !== -1) {
+        const direction = newIndex > oldIndex ? 1 : -1
+        moveWidget(active.id as string, direction)
+        
+        setTimeout(() => {
+          setForceUpdate(prev => prev + 1)
+        }, 0)
+      }
+    }
+  }
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { over } = event
+    if (over) {
+      setDragOverId(over.id as string)
+    } else {
+      setDragOverId(null)
+    }
+  }
+
+  const activeWidget = activeId ? widgets.find(w => w.id === activeId) : null
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+    >
+      <div className="space-y-6">
+        {/* Supply Chain Overview Cards - Draggable Grid */}
+        <div className="grid grid-cols-12 gap-6">
+          {widgets
+            .filter(w => w.enabled && w.size === 'sm')
+            .sort((a, b) => a.order - b.order)
+            .map((widget) => {
+              const colSpan = getColSpan(widget.size)
+              const isDragOver = dragOverId === widget.id
+              const isActive = activeId === widget.id
+              
+              return (
+                <div 
+                  key={`${widget.id}-${widget.order}-${forceUpdate}`} 
+                  style={{ gridColumn: `span ${colSpan}` }}
+                  className={`
+                    transition-all duration-200
+                    ${isDragOver ? 'ring-2 ring-blue-500 ring-opacity-50 bg-blue-50' : ''}
+                    ${isActive ? 'opacity-50' : ''}
+                  `}
+                >
+                  <WidgetFrame widget={widget}>
+                    {widget.id === 'active-suppliers-metric' && (
+                      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-neutral-600">Active Suppliers</p>
+                            <p className="text-3xl font-bold text-neutral-800 mt-1">47</p>
+                            <p className="text-xs text-green-600 mt-1">+6% this quarter</p>
+                          </div>
+                          <div className="p-3 bg-blue-100 rounded-xl">
+                            <Users2 className="h-6 w-6 text-blue-600" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {widget.id === 'on-time-delivery-metric' && (
+                      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-neutral-600">On-Time Delivery</p>
+                            <p className="text-3xl font-bold text-neutral-800 mt-1">94.2%</p>
+                            <p className="text-xs text-green-600 mt-1">Above target</p>
+                          </div>
+                          <div className="p-3 bg-green-100 rounded-xl">
+                            <CheckCircle className="h-6 w-6 text-green-600" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {widget.id === 'cost-savings-metric' && (
+                      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-neutral-600">Cost Savings</p>
+                            <p className="text-3xl font-bold text-neutral-800 mt-1">£127K</p>
+                            <p className="text-xs text-green-600 mt-1">+£23K this month</p>
+                          </div>
+                          <div className="p-3 bg-green-100 rounded-xl">
+                            <TrendingUp className="h-6 w-6 text-blue-600" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {widget.id === 'quality-score-metric' && (
+                      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-neutral-600">Quality Score</p>
+                            <p className="text-3xl font-bold text-neutral-800 mt-1">4.7</p>
+                            <p className="text-xs text-green-600 mt-1">High performance</p>
+                          </div>
+                          <div className="p-3 bg-amber-100 rounded-xl">
+                            <Award className="h-6 w-6 text-amber-600" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </WidgetFrame>
+                </div>
+              )
+            })}
+        </div>
+
+        {/* Supplier Directory - Large Widget */}
+        {widgets.find(w => w.id === 'supplier-directory')?.enabled && (
+          <div className="grid grid-cols-12 gap-6">
+            <div 
+              style={{ gridColumn: 'span 12' }}
+              className={`
+                transition-all duration-200
+                ${dragOverId === 'supplier-directory' ? 'ring-2 ring-blue-500 ring-opacity-50 bg-blue-50' : ''}
+                ${activeId === 'supplier-directory' ? 'opacity-50' : ''}
+              `}
+            >
+              <WidgetFrame widget={widgets.find(w => w.id === 'supplier-directory')!}>
+                <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
+                  <div className="p-6 border-b border-neutral-200">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <h2 className="text-xl font-semibold text-neutral-800">Supplier Directory</h2>
+                        <p className="text-neutral-500 text-sm mt-1">Manage and monitor your supplier network</p>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Supplier
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-9 px-3 rounded-lg border-neutral-200 hover:bg-neutral-100"
+                          onClick={() => setShowFullScreenSuppliers(true)}
+                        >
+                          View All
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {/* Filter Controls */}
+                    <div className="flex flex-col sm:flex-row gap-4 mt-4">
+                      <div className="flex-1 max-w-sm">
+                        <Input
+                          placeholder="Search suppliers..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <Select value={filterCategory} onValueChange={setFilterCategory}>
+                        <SelectTrigger className="w-full sm:w-48">
+                          <SelectValue placeholder="All Categories" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Categories</SelectItem>
+                          <SelectItem value="construction">Construction</SelectItem>
+                          <SelectItem value="materials">Materials</SelectItem>
+                          <SelectItem value="equipment">Equipment</SelectItem>
+                          <SelectItem value="services">Services</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select value={filterRegion} onValueChange={setFilterRegion}>
+                        <SelectTrigger className="w-full sm:w-48">
+                          <SelectValue placeholder="All Regions" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Regions</SelectItem>
+                          <SelectItem value="uk">United Kingdom</SelectItem>
+                          <SelectItem value="europe">Europe</SelectItem>
+                          <SelectItem value="germany">Germany</SelectItem>
+                          <SelectItem value="france">France</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Supplier Table */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12"></TableHead>
+                          <TableHead>Supplier</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Region</TableHead>
+                          <TableHead>Performance</TableHead>
+                          <TableHead>Cost/Unit</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredSuppliers.map((supplier) => (
+                          <TableRow key={supplier.id} className="hover:bg-neutral-50">
+                            <TableCell>
+                              <Checkbox 
+                                checked={supplierComparison.includes(supplier.name)}
+                                onCheckedChange={() => toggleSupplierComparison(supplier.name)}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarFallback className="text-xs">{supplier.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium text-neutral-800">{supplier.name}</p>
+                                  <p className="text-xs text-neutral-500">{supplier.email}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {supplier.category}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-neutral-600">{supplier.region}</span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium">{supplier.score}/5.0</span>
+                                <Progress value={supplier.score * 20} className="w-16 h-2" />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm font-medium">£{supplier.costPerUnit}</span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={supplier.approved ? "default" : "secondary"}>
+                                {supplier.approved ? "Approved" : "Pending"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </WidgetFrame>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <DragOverlay>
+        {activeId && activeWidget ? (
+          <div className="bg-white rounded-2xl shadow-xl border border-neutral-200 p-6 opacity-90 scale-105 transform rotate-1">
+            <div className="text-lg font-semibold text-neutral-800">{activeWidget.title}</div>
+          </div>
+        ) : null}
+      </DragOverlay>
+
+      {/* Full Screen Suppliers Modal */}
+      {showFullScreenSuppliers && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-neutral-200">
+              <div>
+                <h2 className="text-2xl font-semibold text-neutral-800">📋 All Suppliers Directory</h2>
+                <p className="text-neutral-500 mt-1">Complete supplier network with detailed information</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFullScreenSuppliers(false)}
+                className="h-10 w-10 p-0 hover:bg-neutral-100"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Filters */}
+            <div className="p-6 border-b border-neutral-200 bg-neutral-50">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 max-w-sm">
+                  <Input
+                    placeholder="Search suppliers..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                
+                <Select value={filterCategory} onValueChange={setFilterCategory}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    <SelectItem value="construction">Construction</SelectItem>
+                    <SelectItem value="materials">Materials</SelectItem>
+                    <SelectItem value="equipment">Equipment</SelectItem>
+                    <SelectItem value="services">Services</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select value={filterRegion} onValueChange={setFilterRegion}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="All Regions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Regions</SelectItem>
+                    <SelectItem value="uk">United Kingdom</SelectItem>
+                    <SelectItem value="europe">Europe</SelectItem>
+                    <SelectItem value="germany">Germany</SelectItem>
+                    <SelectItem value="france">France</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="flex-1 overflow-auto p-6">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead>Supplier</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Region</TableHead>
+                      <TableHead>Performance</TableHead>
+                      <TableHead>Cost/Unit</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSuppliers.map((supplier) => (
+                      <TableRow key={supplier.id} className="hover:bg-neutral-50">
+                        <TableCell>
+                          <Checkbox 
+                            checked={supplierComparison.includes(supplier.name)}
+                            onCheckedChange={() => toggleSupplierComparison(supplier.name)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="text-xs">{supplier.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-neutral-800">{supplier.name}</p>
+                              <p className="text-xs text-neutral-500">{supplier.email}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {supplier.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-3 w-3 text-neutral-500" />
+                            <span className="text-sm">{supplier.region}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 bg-neutral-200 rounded-full h-2">
+                              <div 
+                                className="bg-green-600 h-2 rounded-full" 
+                                style={{ width: `${supplier.performance}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium">{supplier.performance}%</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-sm font-medium">${supplier.costPerUnit}</span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={supplier.approved ? "default" : "secondary"}
+                            className={supplier.approved ? "bg-green-100 text-green-800" : "bg-neutral-100 text-neutral-600"}
+                          >
+                            {supplier.approved ? "Approved" : "Pending"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-neutral-200 bg-neutral-50">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-neutral-500">
+                  Showing {filteredSuppliers.length} of {supplierPerformanceData.length} suppliers
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm">
+                    Export Data
+                  </Button>
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New Supplier
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </DndContext>
+  )
+}
+
+export default function SupplyChainPage(props: SupplyChainPageProps) {
+  const {
+    widgets,
+    getPageWidgets,
+    moveWidget,
+    updateWidgetSize,
+    customizeMode,
+    setCustomizeMode,
+    supplierViewMode,
+    setSupplierViewMode,
+    supplierComparison,
+    toggleSupplierComparison,
+    showSupplierComparison,
+    setShowSupplierComparison,
+    screenSize
+  } = props
+  
+  const { editMode } = useDashboardStore()
+  
+  // Supply Chain Widget State Management
+  const [supplyWidgets, setSupplyWidgets] = useState([
+    { id: 'active-suppliers-metric', title: 'Active Suppliers', area: 'supply', size: 'sm' as const, enabled: true, order: 1 },
+    { id: 'on-time-delivery-metric', title: 'On-Time Delivery', area: 'supply', size: 'sm' as const, enabled: true, order: 2 },
+    { id: 'cost-savings-metric', title: 'Cost Savings', area: 'supply', size: 'sm' as const, enabled: true, order: 3 },
+    { id: 'quality-score-metric', title: 'Quality Score', area: 'supply', size: 'sm' as const, enabled: true, order: 4 },
+    { id: 'supplier-directory', title: 'Supplier Directory', area: 'supply', size: 'xl' as const, enabled: true, order: 5 },
+  ])
+
+  const updateSupplyWidget = (id: string, updates: any) => {
+    setSupplyWidgets(prev => prev.map(w => w.id === id ? { ...w, ...updates } : w))
+  }
+
+  const moveSupplyWidget = (id: string, direction: -1 | 1) => {
+    setSupplyWidgets(prev => {
+      const widgets = [...prev]
+      const index = widgets.findIndex(w => w.id === id)
+      if (index === -1) return prev
+      
+      const newIndex = index + direction
+      if (newIndex < 0 || newIndex >= widgets.length) return prev
+      
+      const temp = widgets[index]
+      widgets[index] = widgets[newIndex]
+      widgets[newIndex] = temp
+      
+      return widgets.map((w, i) => ({ ...w, order: i }))
+    })
+  }
+
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [filterRegion, setFilterRegion] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
 
-  // Enhanced supplier data with recommendation logic
-  const getSupplierRecommendations = (supplier: typeof supplierPerformanceData[0]) => {
-    const recommendations = []
-    
-    if (supplier.score >= 4.8) recommendations.push("Top Rated")
-    if (supplier.onTimeDelivery >= 95) recommendations.push("Reliable Delivery")
-    if (supplier.costPerUnit <= 25) recommendations.push("Best Value")
-    if (supplier.responseTime <= 1) recommendations.push("Fast Response")
-    if (supplier.region === "UK") recommendations.push("Local Supplier")
-    
-    return recommendations
-  }
-
-  const getBestMaterialMatch = (supplier: typeof supplierPerformanceData[0]) => {
-    // Simulate finding best material price match
-    const materials = supplier.materialsAvailable
-    const bestMaterial = materials[Math.floor(Math.random() * materials.length)]
-    const savings = Math.floor(Math.random() * 15) + 5
-    
-    return { material: bestMaterial, savings: `${savings}% below market` }
-  }
-
+  // Filter suppliers
   const filteredSuppliers = supplierPerformanceData.filter(supplier => {
     const matchesCategory = filterCategory === "all" || supplier.category.toLowerCase() === filterCategory.toLowerCase()
     const matchesRegion = filterRegion === "all" || supplier.region.toLowerCase() === filterRegion.toLowerCase()
     const matchesSearch = searchQuery === "" || 
       supplier.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      supplier.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      supplier.materialsAvailable.some(material => material.toLowerCase().includes(searchQuery.toLowerCase()))
+      supplier.category.toLowerCase().includes(searchQuery.toLowerCase())
     
     return matchesCategory && matchesRegion && matchesSearch && supplier.approved
   })
 
-  const selectedSuppliers = supplierComparison.map(name => 
-    supplierPerformanceData.find(s => s.name === name)
-  ).filter(Boolean)
+  // Simple supplier selection - avoiding complex array methods
+  const selectedSuppliers = []
+  for (const name of supplierComparison) {
+    const supplier = supplierPerformanceData.find(s => s.name === name)
+    if (supplier) {
+      selectedSuppliers.push(supplier)
+    }
+  }
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-800">Supply Chain</h1>
-        <p className="text-neutral-500 mt-1">Manage your supplier network and performance analytics</p>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex items-center gap-3 mb-6">
-        <Button variant="outline" className="flex items-center gap-2 h-11 px-4 rounded-xl hover:bg-neutral-100 border-neutral-200">
-          <BarChart3 className="h-4 w-4" />
-          Analytics
-        </Button>
-        <Button className="flex items-center gap-2 h-11 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white">
-          <Plus className="h-4 w-4" />
-          Add Supplier
-        </Button>
-      </div>
-
-      {/* Page-specific widgets for Supply Chain */}
-      <div className={`grid gap-6 ${getResponsiveGridCols('desktop')}`}>
-        {getPageWidgets('supply-chain').map((widget, index) => (
-          <DraggableWidget
-            key={widget.id}
-            widget={widget}
-            index={index}
-            moveWidget={moveWidget}
-            customizeMode={customizeMode}
-            screenSize={screenSize}
-            onSizeChange={updateWidgetSize}
-          >
-            <WidgetRenderer widget={widget} viewMode="monthly" setViewMode={() => {}} />
-          </DraggableWidget>
-        ))}
-      </div>
-
-      {/* Supply Chain Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-neutral-600">Active Suppliers</p>
-              <p className="text-3xl font-bold text-neutral-800 mt-1">47</p>
-              <p className="text-xs text-green-600 mt-1">+6% this quarter</p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <Users2 className="h-6 w-6 text-blue-600" />
-            </div>
+      {/* Edit Mode Notification */}
+      {editMode && (
+        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-800 mb-2">
+            <strong>Edit Mode Active:</strong> Drag widgets using the blue handle (⋮⋮) to reorder them, or use the side panel controls.
+          </p>
+          <div className="text-xs text-blue-600">
+            <strong>Tip:</strong> Toggle widget visibility and sizes from the right panel.
           </div>
         </div>
-        
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-neutral-600">On-Time Delivery</p>
-              <p className="text-3xl font-bold text-neutral-800 mt-1">94%</p>
-              <p className="text-xs text-green-600 mt-1">Above target</p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-xl">
-              <Truck className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-neutral-600">Cost Savings</p>
-              <p className="text-3xl font-bold text-neutral-800 mt-1">12%</p>
-              <p className="text-xs text-green-600 mt-1">{formatLargeCurrency(285000)} saved</p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <TrendingUp className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-neutral-600">Quality Score</p>
-              <p className="text-3xl font-bold text-neutral-800 mt-1">4.7</p>
-              <p className="text-xs text-green-600 mt-1">High performance</p>
-            </div>
-            <div className="p-3 bg-amber-100 rounded-xl">
-              <Award className="h-6 w-6 text-amber-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters and Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white rounded-lg border">
-        <div className="flex items-center gap-4 flex-1">
-          <div className="flex-1 min-w-60">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
-              <Input 
-                placeholder="Search suppliers by name, category, or materials..." 
-                className="pl-10"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="electrical">Electrical</SelectItem>
-              <SelectItem value="structural">Structural</SelectItem>
-              <SelectItem value="hvac">HVAC</SelectItem>
-              <SelectItem value="plumbing">Plumbing</SelectItem>
-              <SelectItem value="general">General</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={filterRegion} onValueChange={setFilterRegion}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Regions</SelectItem>
-              <SelectItem value="uk">UK</SelectItem>
-              <SelectItem value="germany">Germany</SelectItem>
-              <SelectItem value="france">France</SelectItem>
-              <SelectItem value="netherlands">Netherlands</SelectItem>
-              <SelectItem value="spain">Spain</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {supplierComparison.length > 0 && (
-            <Button
-              variant="outline"
-              onClick={() => setShowSupplierComparison(true)}
-              className="flex items-center gap-2"
-            >
-              <Eye className="h-4 w-4" />
-              Compare ({supplierComparison.length})
-            </Button>
-          )}
-          
-          <div className="flex items-center border rounded-lg p-1">
-            <Button
-              variant={supplierViewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setSupplierViewMode('list')}
-              className="h-8 w-8 p-0"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={supplierViewMode === 'card' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setSupplierViewMode('card')}
-              className="h-8 w-8 p-0"
-            >
-              <Grid3X3 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Enhanced Supplier Cards/List */}
-      {supplierViewMode === 'card' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSuppliers.map((supplier) => (
-            <Card key={supplier.name} className="hover:shadow-lg transition-all duration-300">
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-base font-semibold text-neutral-800">{supplier.name}</CardTitle>
-                    <p className="text-sm text-neutral-500 mt-1">{supplier.category} • {supplier.region}</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-medium text-neutral-800">{supplier.score}</span>
-                  </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <div className="text-sm font-semibold text-neutral-800">{supplier.onTimeDelivery}%</div>
-                    <div className="text-xs text-neutral-500">On-Time</div>
-                  </div>
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-sm font-semibold text-neutral-800">{supplier.responseTime}d avg</div>
-                    <div className="text-xs text-neutral-500">Response</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-neutral-800">£{supplier.costPerUnit}/unit</span>
-                  <Badge variant={supplier.approved ? "default" : "secondary"}>
-                    {supplier.approved ? "Approved" : "Pending"}
-                  </Badge>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="text-xs text-neutral-500">Materials Available:</div>
-                  <div className="flex flex-wrap gap-1">
-                    {supplier.materialsAvailable.slice(0, 3).map((material) => (
-                      <Badge key={material} variant="outline" className="text-xs">
-                        {material}
-                      </Badge>
-                    ))}
-                    {supplier.materialsAvailable.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{supplier.materialsAvailable.length - 3} more
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <div className="flex items-center gap-2">
-                    <Checkbox 
-                      checked={supplierComparison.includes(supplier.name)}
-                      onCheckedChange={() => toggleSupplierComparison(supplier.name)}
-                    />
-                    <span className="text-sm text-neutral-600">Compare</span>
-                  </div>
-                  <Button size="sm" variant="outline">
-                    View Details
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-neutral-800">Supplier Directory</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="font-semibold text-neutral-800">Supplier</TableHead>
-                  <TableHead className="font-semibold text-neutral-800">Category</TableHead>
-                  <TableHead className="font-semibold text-neutral-800">Rating</TableHead>
-                  <TableHead className="font-semibold text-neutral-800">Region</TableHead>
-                  <TableHead className="font-semibold text-neutral-800">Best Material Match</TableHead>
-                  <TableHead className="font-semibold text-neutral-800">On-Time</TableHead>
-                  <TableHead className="font-semibold text-neutral-800">Cost/Unit</TableHead>
-                  <TableHead className="font-semibold text-neutral-800">Status</TableHead>
-                  <TableHead className="font-semibold text-neutral-800 w-32">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSuppliers.map((supplier) => {
-                  const bestMatch = getBestMaterialMatch(supplier)
-                  return (
-                    <TableRow key={supplier.name}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
-                              {supplier.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium text-neutral-800">{supplier.name}</div>
-                            <div className="text-sm text-neutral-500">{supplier.contact}</div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{supplier.category}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          <span className="font-medium text-neutral-800">{supplier.score}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-neutral-500" />
-                          <span className="text-sm text-neutral-600">{supplier.region}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm font-medium text-neutral-800">{bestMatch.material}</div>
-                        <div className="text-xs text-green-600">{bestMatch.savings}</div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-neutral-800 font-medium">{supplier.onTimeDelivery}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-neutral-800 font-medium">£{supplier.costPerUnit}</TableCell>
-                      <TableCell>
-                        <Badge variant={supplier.approved ? "default" : "secondary"}>
-                          {supplier.approved ? "Approved" : "Pending"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Checkbox 
-                            checked={supplierComparison.includes(supplier.name)}
-                            onCheckedChange={() => toggleSupplierComparison(supplier.name)}
-                          />
-                          <Button size="sm" variant="outline">
-                            View
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
       )}
+      
+      <div className={editMode ? "pr-[420px]" : ""}>
+        {/* Page Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-800">Supply Chain</h1>
+          <p className="text-neutral-500 mt-1">Manage your supplier network and performance analytics</p>
+        </div>
 
-      {/* Supplier Comparison Dialog */}
-      <Dialog open={showSupplierComparison} onOpenChange={setShowSupplierComparison}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-neutral-800">Supplier Comparison</DialogTitle>
-            <DialogDescription className="text-neutral-500">
-              Compare selected suppliers across key metrics
-            </DialogDescription>
-          </DialogHeader>
+        {/* Supply Chain Grid with Drag-and-Drop */}
+        <SupplyChainGrid 
+          widgets={supplyWidgets}
+          updateWidget={updateSupplyWidget}
+          moveWidget={moveSupplyWidget}
+          filteredSuppliers={filteredSuppliers}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          filterCategory={filterCategory}
+          setFilterCategory={setFilterCategory}
+          filterRegion={filterRegion}
+          setFilterRegion={setFilterRegion}
+          supplierComparison={supplierComparison}
+          toggleSupplierComparison={toggleSupplierComparison}
+          customizeMode={customizeMode}
+          screenSize={screenSize}
+          updateWidgetSize={updateWidgetSize}
+          moveWidgetProp={moveWidget}
+        />
+      </div>
 
-          {selectedSuppliers.length > 0 && (
-            <div className="space-y-6">
-              {/* Quick Comparison Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {selectedSuppliers.map((supplier) => 
-                  supplier && (
-                    <Card key={supplier.name}>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base font-semibold text-neutral-800">{supplier.name}</CardTitle>
-                        <p className="text-sm text-neutral-500">{supplier.category} • {supplier.region}</p>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-neutral-600">Rating</span>
-                          <div className="flex items-center gap-1">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span className="font-medium text-neutral-800">{supplier.score}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-neutral-600">On-Time Delivery</span>
-                          <span className="font-medium text-neutral-800">{supplier.onTimeDelivery}%</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-neutral-600">Cost per Unit</span>
-                          <span className="font-medium text-neutral-800">£{supplier.costPerUnit}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-neutral-600">Response Time</span>
-                          <span className="font-medium text-neutral-800">{supplier.responseTime}d</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                )}
-              </div>
-
-              {/* Detailed Comparison Table */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-neutral-800">Detailed Comparison</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="font-semibold text-neutral-800">Metric</TableHead>
-                        {selectedSuppliers.map((supplier) => 
-                          supplier && (
-                            <TableHead key={supplier.name} className="text-center font-semibold text-neutral-800">
-                              {supplier.name}
-                            </TableHead>
-                          )
-                        )}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium text-neutral-800">Overall Rating</TableCell>
-                        {selectedSuppliers.map((supplier) => 
-                          supplier && (
-                            <TableCell key={supplier.name} className="text-center">
-                              <div className="flex items-center justify-center gap-1">
-                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                <span className="font-medium text-neutral-800">{supplier.score}</span>
-                              </div>
-                            </TableCell>
-                          )
-                        )}
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium text-neutral-800">On-Time Delivery</TableCell>
-                        {selectedSuppliers.map((supplier) => 
-                          supplier && (
-                            <TableCell key={supplier.name} className="text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${supplier.onTimeDelivery >= 95 ? 'bg-green-500' : supplier.onTimeDelivery >= 85 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
-                                <span className="font-medium text-neutral-800">{supplier.onTimeDelivery}%</span>
-                              </div>
-                            </TableCell>
-                          )
-                        )}
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium text-neutral-800">Cost per Unit</TableCell>
-                        {selectedSuppliers.map((supplier) => 
-                          supplier && (
-                            <TableCell key={supplier.name} className="text-center font-medium text-neutral-800">
-                              £{supplier.costPerUnit}
-                            </TableCell>
-                          )
-                        )}
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium text-neutral-800">Response Time</TableCell>
-                        {selectedSuppliers.map((supplier) => 
-                          supplier && (
-                            <TableCell key={supplier.name} className="text-center text-neutral-800">
-                              {supplier.responseTime}d avg
-                            </TableCell>
-                          )
-                        )}
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium text-neutral-800">Projects Completed</TableCell>
-                        {selectedSuppliers.map((supplier) => 
-                          supplier && (
-                            <TableCell key={supplier.name} className="text-center font-medium text-neutral-800">
-                              {supplier.projects}
-                            </TableCell>
-                          )
-                        )}
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSupplierComparison(false)}>
-              Close
-            </Button>
-            <Button>Export Comparison</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Global Edit Side Panel */}
+      <EditSidePanel
+        pageName="Supply Chain"
+        pageWidgets={supplyWidgets}
+        updateWidget={updateSupplyWidget}
+        moveWidget={moveSupplyWidget}
+      />
     </div>
   )
 }

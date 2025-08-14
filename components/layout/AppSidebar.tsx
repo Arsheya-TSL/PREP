@@ -32,17 +32,10 @@ export default function AppSidebar({ activeTab, setActiveTab, mode }: AppSidebar
         <div className="border-b border-neutral-200 px-3 py-6 bg-white">
           <div className="flex justify-center">
             <img
-              src="/_next/static/media/tsl%20icon.png"
+              src="/images/TSL_ICON.png"
               alt="TSL Logo"
               className="h-14 w-auto"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-              }}
             />
-            <div className="h-14 w-14 bg-blue-600 rounded-lg flex items-center justify-center hidden">
-              <span className="text-white font-bold text-lg">TSL</span>
-            </div>
           </div>
         </div>
 
@@ -82,17 +75,10 @@ export default function AppSidebar({ activeTab, setActiveTab, mode }: AppSidebar
       <div className="border-b border-neutral-200 px-6 py-6 bg-white">
         <div className="flex items-center gap-3">
           <img
-            src="/_next/static/media/tsl%20icon.png"
+            src="/images/TSL_ICON.png"
             alt="TSL Logo"
             className="h-12 w-auto"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-              e.currentTarget.nextElementSibling?.classList.remove('hidden');
-            }}
           />
-          <div className="h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center hidden">
-            <span className="text-white font-bold text-sm">TSL</span>
-          </div>
           {!isCollapsed && (
             <div>
               <span className="font-bold text-xl text-neutral-800">PREP</span>

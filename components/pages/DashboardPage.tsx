@@ -30,6 +30,7 @@ import WidgetChooserModal from "../modals/WidgetChooserModal"
 import { monthlyData } from "../../lib/constants"
 import TypeToCreateWidgetModal from "../modals/TypeToCreateWidgetModal"
 import EditProjectModal from "../modals/EditProjectModal"
+import { PrimaryButton, GhostButton } from "../ui/shared-components"
 
 // -----------------------------
 // Types
@@ -380,31 +381,7 @@ function Toggle({ checked, onChange, ariaLabel }: {
   )
 }
 
-function GhostButton(props: JSX.IntrinsicElements["button"]) {
-  return (
-    <button
-      {...props}
-      className={[
-        "px-4 py-2 text-sm bg-white border border-neutral-200 rounded-lg hover:bg-neutral-100",
-        "focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2",
-        props.className || "",
-      ].join(" ")}
-    />
-  )
-}
 
-function PrimaryButton(props: JSX.IntrinsicElements["button"]) {
-  return (
-    <button
-      {...props}
-      className={[
-        "px-4 py-2 text-sm bg-black text-white rounded-lg hover:bg-neutral-900",
-        "focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2",
-        props.className || "",
-      ].join(" ")}
-    />
-  )
-}
 
 // -----------------------------
 // Size helpers
@@ -696,7 +673,7 @@ function EditSidePanel({
 // -----------------------------
 // iPhone-style Drag and Drop Components
 // -----------------------------
-function SortableWidgetCard({ widget, children }: { widget: WidgetConfig; children: React.ReactNode }) {
+export function SortableWidgetCard({ widget, children }: { widget: WidgetConfig; children: React.ReactNode }) {
   const { editMode, widgets } = useDashboardStore()
   const {
     attributes,
@@ -763,7 +740,7 @@ function SortableWidgetCard({ widget, children }: { widget: WidgetConfig; childr
 // -----------------------------
 // Widget Frame
 // -----------------------------
-function WidgetFrame({ widget, children }: { widget: WidgetConfig; children: React.ReactNode }) {
+export function WidgetFrame({ widget, children }: { widget: WidgetConfig; children: React.ReactNode }) {
   return (
     <SortableWidgetCard widget={widget}>
       {children}
@@ -1575,9 +1552,9 @@ function DashboardGrid({ widgets, data, onEditProject }: { widgets: WidgetConfig
       currentCol += colSpan
     })
     
-    return (
-      <div className="p-6">
-        <div className="grid grid-cols-12 gap-6" style={{ gridAutoRows: 'min-content' }}>
+          return (
+        <div className="p-4">
+          <div className="grid grid-cols-12 gap-4" style={{ gridAutoRows: 'min-content' }}>
           {widgetPositions.map(({ widget, row, col }) => {
             const colSpan = getColSpan(widget.size)
             return (
@@ -1607,7 +1584,7 @@ function DashboardGrid({ widgets, data, onEditProject }: { widgets: WidgetConfig
       onDragEnd={handleDragEnd}
       onDragOver={handleDragOver}
     >
-      <div className="p-6 grid grid-cols-12 gap-6 relative" style={{ gridAutoRows: 'min-content' }}>
+      <div className="p-4 grid grid-cols-12 gap-4 relative" style={{ gridAutoRows: 'min-content' }}>
         {widgets
           .sort((a, b) => a.order - b.order)
           .map((widget, index) => {

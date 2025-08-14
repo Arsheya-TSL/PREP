@@ -5,15 +5,16 @@ import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { useAppState } from "./hooks/useAppState"
 import { createAppHandlers } from "./lib/appHandlers"
+import { DataProvider } from "./lib/DataContext"
 import AppLayout from "./components/layout/AppLayout"
 import DashboardPage from "./components/pages/DashboardPage"
 import SupplyChainPage from "./components/pages/SupplyChainPage"
 import ITTManagerPage from "./components/pages/ITTManagerPage"
 import ProjectsPage from "./components/pages/ProjectsPage"
 import WorldMapPage from "./components/pages/WorldMapPage"
-
 import SettingsPage from "./components/pages/SettingsPage"
 import CreateProjectModal from "./components/modals/CreateProjectModal"
+import APIConfig from "./components/ui/APIConfig"
 
 export default function App() {
   const state = useAppState()
@@ -44,8 +45,9 @@ export default function App() {
   }, [handlers, state.activeTab])
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <AppLayout activeTab={state.activeTab} setActiveTab={(tab: string) => state.setActiveTab(tab as any)}>
+    <DataProvider>
+      <DndProvider backend={HTML5Backend}>
+        <AppLayout activeTab={state.activeTab} setActiveTab={(tab: string) => state.setActiveTab(tab as any)}>
         {state.activeTab === "dashboard" && (
           <DashboardPage />
         )}
@@ -57,6 +59,7 @@ export default function App() {
             moveWidget={moveWidget}
             updateWidgetSize={handlers.updateWidgetSize}
             customizeMode={state.customizeMode}
+            setCustomizeMode={state.setCustomizeMode}
             supplierViewMode={state.supplierViewMode}
             setSupplierViewMode={state.setSupplierViewMode}
             supplierComparison={state.supplierComparison}
@@ -74,6 +77,7 @@ export default function App() {
             moveWidget={moveWidget}
             updateWidgetSize={handlers.updateWidgetSize}
             customizeMode={state.customizeMode}
+            setCustomizeMode={state.setCustomizeMode}
             showCreateITT={state.showCreateITT}
             setShowCreateITT={state.setShowCreateITT}
             ittFormData={state.ittFormData}
@@ -138,6 +142,10 @@ export default function App() {
         onCreateProject={handlers.handleCreateProject}
         onAutoGenerateITT={handlers.handleAutoGenerateITT}
       />
+        
+      {/* API Configuration */}
+      <APIConfig />
     </DndProvider>
+    </DataProvider>
   )
 }
