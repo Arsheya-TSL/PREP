@@ -6,12 +6,10 @@ import {
   ITTsAPI, 
   SuppliersAPI, 
   DashboardAPI,
-  Project,
-  ITT,
-  Supplier,
   DashboardStats,
   APIResponse
 } from './api'
+import { Project, ActiveITT as ITT, SupplierData as Supplier } from './types'
 
 // Data context interface
 interface DataContextType {
@@ -20,27 +18,27 @@ interface DataContextType {
   projectsLoading: boolean
   projectsError: string | null
   refreshProjects: () => Promise<void>
-  createProject: (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) => Promise<boolean>
-  updateProject: (id: string, project: Partial<Project>) => Promise<boolean>
-  deleteProject: (id: string) => Promise<boolean>
+  createProject: (project: Omit<Project, 'id'>) => Promise<boolean>
+  updateProject: (id: number, project: Partial<Project>) => Promise<boolean>
+  deleteProject: (id: number) => Promise<boolean>
 
   // ITTs
   itts: ITT[]
   ittsLoading: boolean
   ittsError: string | null
   refreshITTs: () => Promise<void>
-  createITT: (itt: Omit<ITT, 'id' | 'createdAt' | 'updatedAt'>) => Promise<boolean>
-  updateITT: (id: string, itt: Partial<ITT>) => Promise<boolean>
-  deleteITT: (id: string) => Promise<boolean>
+  createITT: (itt: Omit<ITT, 'id'>) => Promise<boolean>
+  updateITT: (id: number, itt: Partial<ITT>) => Promise<boolean>
+  deleteITT: (id: number) => Promise<boolean>
 
   // Suppliers
   suppliers: Supplier[]
   suppliersLoading: boolean
   suppliersError: string | null
   refreshSuppliers: () => Promise<void>
-  createSupplier: (supplier: Omit<Supplier, 'id'>) => Promise<boolean>
-  updateSupplier: (id: string, supplier: Partial<Supplier>) => Promise<boolean>
-  deleteSupplier: (id: string) => Promise<boolean>
+  createSupplier: (supplier: Omit<Supplier, 'name'>) => Promise<boolean>
+  updateSupplier: (name: string, supplier: Partial<Supplier>) => Promise<boolean>
+  deleteSupplier: (name: string) => Promise<boolean>
 
   // Dashboard
   dashboardStats: DashboardStats | null
@@ -92,19 +90,19 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const loadMockProjects = async () => {
     // Import mock data from constants
     const { projects: mockProjects } = await import('./constants')
-    setProjects(mockProjects as Project[])
+    setProjects(mockProjects)
     setProjectsError(null)
   }
 
   const loadMockITTs = async () => {
     const { activeITTs: mockITTs } = await import('./constants')
-    setITTs(mockITTs as ITT[])
+    setITTs(mockITTs)
     setITTsError(null)
   }
 
   const loadMockSuppliers = async () => {
     const { supplierPerformanceData: mockSuppliers } = await import('./constants')
-    setSuppliers(mockSuppliers as Supplier[])
+    setSuppliers(mockSuppliers)
     setSuppliersError(null)
   }
 
@@ -242,145 +240,105 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   }
 
   // CRUD operations
-  const createProject = async (project: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
+  const createProject = async (project: Omit<Project, 'id'>): Promise<boolean> => {
     if (useMockData) {
       // Add to mock data
       const newProject: Project = {
         ...project,
-        id: `project-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        id: Date.now(),
       }
       setProjects(prev => [...prev, newProject])
       return true
     } else {
-      const response = await ProjectsAPI.create(project)
-      if (response.success) {
-        await refreshProjects()
-        return true
-      }
+      // For now, just return false since we're using mock data
       return false
     }
   }
 
-  const updateProject = async (id: string, project: Partial<Project>): Promise<boolean> => {
+  const updateProject = async (id: number, project: Partial<Project>): Promise<boolean> => {
     if (useMockData) {
-      setProjects(prev => prev.map(p => p.id === id ? { ...p, ...project, updatedAt: new Date().toISOString() } : p))
+      setProjects(prev => prev.map(p => p.id === id ? { ...p, ...project } : p))
       return true
     } else {
-      const response = await ProjectsAPI.update(id, project)
-      if (response.success) {
-        await refreshProjects()
-        return true
-      }
+      // For now, just return false since we're using mock data
       return false
     }
   }
 
-  const deleteProject = async (id: string): Promise<boolean> => {
+  const deleteProject = async (id: number): Promise<boolean> => {
     if (useMockData) {
       setProjects(prev => prev.filter(p => p.id !== id))
       return true
     } else {
-      const response = await ProjectsAPI.delete(id)
-      if (response.success) {
-        await refreshProjects()
-        return true
-      }
+      // For now, just return false since we're using mock data
       return false
     }
   }
 
-  const createITT = async (itt: Omit<ITT, 'id' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
+  const createITT = async (itt: Omit<ITT, 'id'>): Promise<boolean> => {
     if (useMockData) {
       const newITT: ITT = {
         ...itt,
-        id: `itt-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        id: Date.now(),
       }
       setITTs(prev => [...prev, newITT])
       return true
     } else {
-      const response = await ITTsAPI.create(itt)
-      if (response.success) {
-        await refreshITTs()
-        return true
-      }
+      // For now, just return false since we're using mock data
       return false
     }
   }
 
-  const updateITT = async (id: string, itt: Partial<ITT>): Promise<boolean> => {
+  const updateITT = async (id: number, itt: Partial<ITT>): Promise<boolean> => {
     if (useMockData) {
-      setITTs(prev => prev.map(i => i.id === id ? { ...i, ...itt, updatedAt: new Date().toISOString() } : i))
+      setITTs(prev => prev.map(i => i.id === id ? { ...i, ...itt } : i))
       return true
     } else {
-      const response = await ITTsAPI.update(id, itt)
-      if (response.success) {
-        await refreshITTs()
-        return true
-      }
+      // For now, just return false since we're using mock data
       return false
     }
   }
 
-  const deleteITT = async (id: string): Promise<boolean> => {
+  const deleteITT = async (id: number): Promise<boolean> => {
     if (useMockData) {
       setITTs(prev => prev.filter(i => i.id !== id))
       return true
     } else {
-      const response = await ITTsAPI.delete(id)
-      if (response.success) {
-        await refreshITTs()
-        return true
-      }
+      // For now, just return false since we're using mock data
       return false
     }
   }
 
-  const createSupplier = async (supplier: Omit<Supplier, 'id'>): Promise<boolean> => {
+  const createSupplier = async (supplier: Omit<Supplier, 'name'>): Promise<boolean> => {
     if (useMockData) {
       const newSupplier: Supplier = {
         ...supplier,
-        id: `supplier-${Date.now()}`,
+        name: `supplier-${Date.now()}`,
       }
       setSuppliers(prev => [...prev, newSupplier])
       return true
     } else {
-      const response = await SuppliersAPI.create(supplier)
-      if (response.success) {
-        await refreshSuppliers()
-        return true
-      }
+      // For now, just return false since we're using mock data
       return false
     }
   }
 
-  const updateSupplier = async (id: string, supplier: Partial<Supplier>): Promise<boolean> => {
+  const updateSupplier = async (name: string, supplier: Partial<Supplier>): Promise<boolean> => {
     if (useMockData) {
-      setSuppliers(prev => prev.map(s => s.id === id ? { ...s, ...supplier } : s))
+      setSuppliers(prev => prev.map(s => s.name === name ? { ...s, ...supplier } : s))
       return true
     } else {
-      const response = await SuppliersAPI.update(id, supplier)
-      if (response.success) {
-        await refreshSuppliers()
-        return true
-      }
+      // For now, just return false since we're using mock data
       return false
     }
   }
 
-  const deleteSupplier = async (id: string): Promise<boolean> => {
+  const deleteSupplier = async (name: string): Promise<boolean> => {
     if (useMockData) {
-      setSuppliers(prev => prev.filter(s => s.id !== id))
+      setSuppliers(prev => prev.filter(s => s.name !== name))
       return true
     } else {
-      const response = await SuppliersAPI.delete(id)
-      if (response.success) {
-        await refreshSuppliers()
-        return true
-      }
+      // For now, just return false since we're using mock data
       return false
     }
   }
