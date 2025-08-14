@@ -1658,12 +1658,9 @@ export default function DashboardPage() {
       if (persisted.range) setRange(persisted.range)
       if (persisted.widgets) setWidgets(() => persisted.widgets)
     }
-  }, [setRange, setWidgets])
+  }, [])
 
-  // Debug modal state changes
-  useEffect(() => {
-    console.log('🎭 Modal state changed - showWidgetChooser:', showWidgetChooser, 'showTypeToCreate:', showTypeToCreate)
-  }, [showWidgetChooser, showTypeToCreate])
+
 
   // Store original state when entering edit mode
   useEffect(() => {
@@ -1728,17 +1725,14 @@ export default function DashboardPage() {
       <WidgetChooserModal
         isOpen={showWidgetChooser}
         onClose={() => {
-          console.log('❌ WidgetChooserModal onClose called')
           setShowWidgetChooser(false)
         }}
         onChooseStandard={() => {
-          console.log('🔧 Standard builder chosen')
           setShowWidgetChooser(false)
           // For now, show an alert. In the future, this would open a 4-step builder modal
           alert('Standard Builder selected! This would open a 4-step widget builder.')
         }}
         onChooseTypeToCreate={() => {
-          console.log('✨ Type to Create chosen')
           setShowWidgetChooser(false)
           setShowTypeToCreate(true)
         }}
@@ -1759,7 +1753,6 @@ export default function DashboardPage() {
         }}
         project={selectedProject}
         onSave={(updatedProject) => {
-          console.log('Project updated:', updatedProject)
           updateProject(updatedProject)
           setShowEditProject(false)
           setSelectedProject(null)

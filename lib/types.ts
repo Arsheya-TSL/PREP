@@ -125,6 +125,8 @@ export interface ITTFormData {
 export interface ProjectFormData {
   name: string
   location: string
+  latitude?: string
+  longitude?: string
   country: string
   startDate: string
   endDate: string

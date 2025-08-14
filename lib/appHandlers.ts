@@ -135,7 +135,8 @@ ${projectData.specialRequirements ? `Special Requirements: ${projectData.special
       materials: projectData.materials,
       quantities: {},
       specialRequirements: projectData.specialRequirements,
-      compliance: projectData.compliance
+      compliance: projectData.compliance,
+      description: projectData.description || scopeDescription
     }
 
     setIttFormData(ittData)

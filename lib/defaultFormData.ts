@@ -11,7 +11,8 @@ export const defaultITTFormData: ITTFormData = {
   materials: [],
   quantities: {},
   specialRequirements: "",
-  compliance: []
+  compliance: [],
+  description: ""
 }
 
 export const defaultProjectFormData: ProjectFormData = {

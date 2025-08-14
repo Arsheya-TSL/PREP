@@ -24,7 +24,7 @@ function WorldMapCanvas() {
 
   useEffect(() => {
     if (!containerRef.current) return
-    try { console.log('[Map] useEffect mount - mode:', is3D ? '3D' : '2D') } catch {}
+  
 
     // Prepare container
     containerRef.current.innerHTML = ''
@@ -45,7 +45,7 @@ function WorldMapCanvas() {
     wrapper.appendChild(chartDiv)
     containerRef.current.appendChild(wrapper)
     
-    console.log('[Map] Created chart container with ID:', uniqueId)
+
 
 
 
@@ -72,12 +72,11 @@ function WorldMapCanvas() {
     const init = async () => {
       try {
         await loadScript('https://cdn.amcharts.com/lib/editor/map/5/viewer.js')
-        try { console.log('[Map] viewer.js loaded') } catch {}
+  
         if (disposed) return
         
         const am5viewer = (window as any).am5viewer
-        console.log('[Map] am5viewer object:', am5viewer)
-        console.log('[Map] am5viewer.create function:', typeof am5viewer?.create)
+
         
         if (!am5viewer) throw new Error('am5viewer not available')
         if (typeof am5viewer.create !== 'function') throw new Error('am5viewer.create is not a function')
@@ -167,10 +166,9 @@ function WorldMapCanvas() {
         } as any
 
         // Create the map
-        console.log('[Map] Creating chart with config:', config)
-        console.log('[Map] Using container ID:', uniqueId)
+
         const chart = am5viewer.create(uniqueId, config)
-        console.log('[Map] Chart created:', chart)
+
         chartRef.current = chart
         
         if (!chart) {
@@ -179,13 +177,12 @@ function WorldMapCanvas() {
         }
         
         // Check if chart has root
-        console.log('[Map] Chart root:', chart.root)
+
         
         // Wait for chart to be ready
         if (chart.root) {
           chart.root.events.once('frameended', () => {
-            console.log('[Map] Chart frame ended - chart should be ready now')
-            console.log('[Map] Chart series:', chart.series)
+            
           })
         }
 
@@ -333,6 +330,11 @@ export default function ProjectsPage({
   // All regions modal state
   const [showAllRegionsModal, setShowAllRegionsModal] = useState(false)
   const [regionSearch, setRegionSearch] = useState("")
+  
+  // Map picker state
+  const [showMapPicker, setShowMapPicker] = useState(false)
+  const mapRef = useRef<any>(null)
+  const markerRef = useRef<any>(null)
 
   // Comprehensive list of all countries
   const allCountries = [
@@ -366,6 +368,96 @@ export default function ProjectsPage({
   const filteredCountries = allCountries.filter(country => 
     country.toLowerCase().includes(countrySearch.toLowerCase())
   ).slice(0, 10) // Limit to 10 results for performance
+
+  // Initialize map picker
+  const initializeMapPicker = () => {
+    if (typeof window === 'undefined') return
+
+    // Check if Leaflet is already loaded
+    if ((window as any).L) {
+      createMap()
+      return
+    }
+
+    // Load Leaflet CSS
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+    link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY='
+    link.crossOrigin = ''
+    document.head.appendChild(link)
+
+    // Load Leaflet JS
+    const script = document.createElement('script')
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo='
+    script.crossOrigin = ''
+    script.onload = createMap
+    document.head.appendChild(script)
+  }
+
+  const createMap = () => {
+    const L = (window as any).L
+    if (!L) return
+
+    const mapContainer = document.getElementById('map-picker')
+    if (!mapContainer) return
+
+    // Clear existing map
+    mapContainer.innerHTML = ''
+
+    // Get initial coordinates or default to London
+    const initialLat = projectFormData.latitude ? parseFloat(projectFormData.latitude) : 51.5074
+    const initialLng = projectFormData.longitude ? parseFloat(projectFormData.longitude) : -0.1278
+
+    // Initialize map
+    const map = L.map('map-picker').setView([initialLat, initialLng], 10)
+    mapRef.current = map
+
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map)
+
+    // Add existing marker if coordinates exist
+    if (projectFormData.latitude && projectFormData.longitude) {
+      const marker = L.marker([initialLat, initialLng]).addTo(map)
+      markerRef.current = marker
+    }
+
+    // Add click handler
+    map.on('click', (e: any) => {
+      const { lat, lng } = e.latlng
+      
+      // Remove existing marker
+      if (markerRef.current) {
+        map.removeLayer(markerRef.current)
+      }
+
+      // Add new marker
+      const marker = L.marker([lat, lng]).addTo(map)
+      markerRef.current = marker
+
+      // Update form data
+      projectFormData.latitude = lat.toFixed(6)
+      projectFormData.longitude = lng.toFixed(6)
+      setProjectFormData({ ...projectFormData })
+    })
+  }
+
+  // Initialize map when modal opens
+  useEffect(() => {
+    if (showMapPicker) {
+      setTimeout(initializeMapPicker, 100)
+    } else {
+      // Clean up map when modal closes
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
+        markerRef.current = null
+      }
+    }
+  }, [showMapPicker])
 
   // Pre-made projects (existing projects in progress)
   const existingProjects = [
@@ -807,6 +899,33 @@ export default function ProjectsPage({
                             />
                   </div>
                           
+                  <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                              📍 Project Location <span className="text-red-500">*</span>
+                            </label>
+                            <div className="space-y-2">
+                              <Input 
+                                className="h-10 w-full border border-slate-200 focus:border-blue-400 bg-white rounded-md shadow-sm text-sm" 
+                                value={projectFormData.location} 
+                                onChange={(e) => setProjectFormData({ ...projectFormData, location: e.target.value })} 
+                                placeholder="Enter address or location" 
+                              />
+                              <Button 
+                                type="button"
+                                variant="outline"
+                                className="h-8 px-3 text-xs border-blue-200 hover:border-blue-400 bg-blue-50 hover:bg-blue-100"
+                                onClick={() => setShowMapPicker(true)}
+                              >
+                                🗺️ Drop Pin on Map
+                              </Button>
+                              {projectFormData.latitude && projectFormData.longitude && (
+                                <div className="text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
+                                  📍 Coordinates: {projectFormData.latitude}, {projectFormData.longitude}
+                                </div>
+                              )}
+                            </div>
+                  </div>
+                          
                           {/* Row 2: Start Date & End Date */}
                   <div className="space-y-2">
                             <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
@@ -910,59 +1029,12 @@ export default function ProjectsPage({
                     <div className="space-y-4">
                       <div className="mb-4 p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200">
                         <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
-                          🔧 Materials & Compliance
+                          ✅ Compliance Requirements
                         </h3>
-                        <p className="text-slate-600 text-sm">Specify materials and compliance requirements</p>
+                        <p className="text-slate-600 text-sm">Specify compliance requirements for this project</p>
                   </div>
                       
                       <div className="space-y-4">
-                        <div className="space-y-3">
-                          <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
-                            🛠️ Required Materials
-                          </label>
-                          <div className="flex gap-3">
-                            <Input 
-                              className="h-11 border-2 border-slate-200 focus:border-orange-400 bg-white rounded-lg shadow-sm hover:shadow-md transition-all flex-1" 
-                              value={newMaterial} 
-                              onChange={(e) => setNewMaterial(e.target.value)} 
-                              placeholder="🏗️ Enter material name" 
-                              onKeyDown={(e) => { 
-                                if (e.key === 'Enter' && newMaterial.trim()) { 
-                                  setProjectFormData({ ...projectFormData, materials: [...projectFormData.materials, newMaterial.trim()] }); 
-                                  setNewMaterial('') 
-                                } 
-                              }} 
-                            />
-                            <Button 
-                              type="button" 
-                              className="h-11 px-6 bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 shadow-md hover:shadow-lg transition-all" 
-                              onClick={() => { 
-                                if (newMaterial.trim()) { 
-                                  setProjectFormData({ ...projectFormData, materials: [...projectFormData.materials, newMaterial.trim()] }); 
-                                  setNewMaterial('') 
-                                } 
-                              }}
-                            >
-                              ➕ Add
-                            </Button>
-                </div>
-                          
-                          {projectFormData.materials.length > 0 && (
-                            <div className="flex flex-wrap gap-2 p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200">
-                              {projectFormData.materials.map((m, idx) => (
-                                <span key={idx} className="inline-flex items-center gap-2 px-3 py-2 bg-white border-2 border-orange-200 rounded-full text-sm shadow-sm">
-                                  🔧 {m}
-                                  <button 
-                                    className="text-red-500 hover:text-red-700 font-bold transition-colors" 
-                                    onClick={() => setProjectFormData({ ...projectFormData, materials: projectFormData.materials.filter((x) => x !== m) })}
-                                  >
-                                    ❌
-                                  </button>
-                                </span>
-                              ))}
-              </div>
-                          )}
-                        </div>
                         
                         <div className="space-y-3">
                           <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
@@ -1101,7 +1173,7 @@ export default function ProjectsPage({
                 </div>
 
                                 {/* Right Side - Country Preview */}
-                <div className="w-80 flex-shrink-0">
+                <div className="w-96 flex-shrink-0">
                   <div className="sticky top-6">
                     <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl border-2 border-blue-200 p-6 shadow-lg">
                       <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -1109,37 +1181,40 @@ export default function ProjectsPage({
                         <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-pulse"></div>
                       </h4>
                       
-                      {selectedCountry ? (
-                        <div className="space-y-4">
-                          {/* Country Flag & Info */}
-                          <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200">
-                            <div className="text-8xl mb-4">{getCountryInfo(selectedCountry).flag}</div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-2">{selectedCountry}</h3>
-                            <div className="flex items-center justify-center gap-2 text-slate-600">
-                              <span className="text-2xl">{getCountryInfo(selectedCountry).emoji}</span>
-                              <span className="font-medium">{getCountryInfo(selectedCountry).region}</span>
+                                            {projectFormData.latitude && projectFormData.longitude ? (
+                        <div className="p-8 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200">
+                          <div className="space-y-4">
+                            <div className="relative">
+                              <iframe 
+                                src={`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(projectFormData.longitude)-0.01},${parseFloat(projectFormData.latitude)-0.01},${parseFloat(projectFormData.longitude)+0.01},${parseFloat(projectFormData.latitude)+0.01}&layer=mapnik&marker=${projectFormData.latitude},${projectFormData.longitude}`}
+                                width="100%"
+                                height="288"
+                                frameBorder="0"
+                                scrolling="no"
+                                marginHeight={0}
+                                marginWidth={0}
+                                className="rounded-lg border border-green-300 shadow-sm"
+                                title="Location Map"
+                              />
+                              <div className="absolute top-3 right-3">
+                                <div className="bg-red-500 text-white text-sm px-3 py-1 rounded-full shadow-lg">
+                                  📍
+                                </div>
+                              </div>
+                              <div className="absolute bottom-3 left-3">
+                                <a 
+                                  href={`https://www.openstreetmap.org/?mlat=${projectFormData.latitude}&mlon=${projectFormData.longitude}#map=14/${projectFormData.latitude}/${projectFormData.longitude}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 rounded shadow-sm transition-colors"
+                                >
+                                  View Full
+                                </a>
+                              </div>
                             </div>
-                          </div>
-                          
-                          {/* Project Info */}
-                          <div className="bg-white rounded-lg border border-slate-200 p-4">
-                            <h5 className="font-bold text-slate-700 mb-2 flex items-center gap-1">
-                              🏗️ Project Location
-                            </h5>
-                            <p className="text-sm text-slate-600">
-                              Your construction tender will be located in <span className="font-bold text-blue-600">{selectedCountry}</span>
-                            </p>
-                          </div>
-                          
-                          {/* Quick Stats */}
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-                              <div className="text-green-600 font-bold text-lg">✅</div>
-                              <div className="text-xs font-medium text-green-700">Location Set</div>
-                            </div>
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                              <div className="text-blue-600 font-bold text-lg">🌐</div>
-                              <div className="text-xs font-medium text-blue-700">Global Reach</div>
+                            
+                            <div className="text-sm text-green-600 font-mono bg-green-50 p-3 rounded border border-green-200 text-center">
+                              Lat: {projectFormData.latitude} | Lng: {projectFormData.longitude}
                             </div>
                           </div>
                         </div>
@@ -1572,6 +1647,68 @@ export default function ProjectsPage({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Map Picker Modal */}
+      {showMapPicker && (
+        <Dialog open={showMapPicker} onOpenChange={setShowMapPicker}>
+          <DialogContent className="w-[90vw] max-w-4xl h-[80vh] !max-w-none">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                🗺️ Drop Pin on Map
+              </DialogTitle>
+              <DialogDescription>
+                Click anywhere on the map to set your project location coordinates
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="flex-1 relative">
+              <div className="h-full w-full bg-gray-100 rounded-lg overflow-hidden">
+                <div 
+                  id="map-picker" 
+                  className="w-full h-full"
+                  style={{ minHeight: '400px' }}
+                />
+              </div>
+              
+              <div className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-lg border">
+                <div className="text-sm font-medium text-gray-700 mb-2">📍 Selected Location</div>
+                <div className="text-xs text-gray-500">
+                  Click on the map to set coordinates
+                </div>
+                <div className="mt-2 space-y-1">
+                  <div className="text-xs">
+                    <span className="font-medium">Lat:</span> 
+                    <input 
+                      type="text" 
+                      placeholder="51.5074" 
+                      className="ml-1 px-2 py-1 border rounded text-xs w-20"
+                      value={projectFormData.latitude || ''}
+                      onChange={(e) => setProjectFormData({ ...projectFormData, latitude: e.target.value })}
+                    />
+                  </div>
+                  <div className="text-xs">
+                    <span className="font-medium">Lng:</span> 
+                    <input 
+                      type="text" 
+                      placeholder="-0.1278" 
+                      className="ml-1 px-2 py-1 border rounded text-xs w-20"
+                      value={projectFormData.longitude || ''}
+                      onChange={(e) => setProjectFormData({ ...projectFormData, longitude: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <Button 
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={() => setShowMapPicker(false)}
+                >
+                  ✅ Use This Location
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
