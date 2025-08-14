@@ -119,6 +119,7 @@ export interface ITTFormData {
   quantities: Record<string, number>
   specialRequirements: string
   compliance: string[]
+  description: string
 }
 
 export interface ProjectFormData {
