@@ -2,12 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { 
-  ProjectsAPI, 
-  ITTsAPI, 
-  SuppliersAPI, 
-  DashboardAPI,
-  DashboardStats,
-  APIResponse
+  DashboardStats
 } from './api'
 import { Project, ActiveITT as ITT, SupplierData as Supplier } from './types'
 
@@ -133,18 +128,14 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     setDashboardError(null)
   }
 
-  // Real API functions
+  // Real API functions (disabled for now - using mock data)
   const loadRealProjects = async () => {
     setProjectsLoading(true)
     setProjectsError(null)
     
     try {
-      const response = await ProjectsAPI.getAll()
-      if (response.success && response.data) {
-        setProjects(response.data)
-      } else {
-        setProjectsError(response.error || 'Failed to load projects')
-      }
+      // For now, just load mock data since we're not using real APIs
+      await loadMockProjects()
     } catch (error) {
       setProjectsError('Network error loading projects')
     } finally {
@@ -157,12 +148,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     setITTsError(null)
     
     try {
-      const response = await ITTsAPI.getAll()
-      if (response.success && response.data) {
-        setITTs(response.data)
-      } else {
-        setITTsError(response.error || 'Failed to load ITTs')
-      }
+      // For now, just load mock data since we're not using real APIs
+      await loadMockITTs()
     } catch (error) {
       setITTsError('Network error loading ITTs')
     } finally {
@@ -175,12 +162,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     setSuppliersError(null)
     
     try {
-      const response = await SuppliersAPI.getAll()
-      if (response.success && response.data) {
-        setSuppliers(response.data)
-      } else {
-        setSuppliersError(response.error || 'Failed to load suppliers')
-      }
+      // For now, just load mock data since we're not using real APIs
+      await loadMockSuppliers()
     } catch (error) {
       setSuppliersError('Network error loading suppliers')
     } finally {
@@ -193,12 +176,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     setDashboardError(null)
     
     try {
-      const response = await DashboardAPI.getStats()
-      if (response.success && response.data) {
-        setDashboardStats(response.data)
-      } else {
-        setDashboardError(response.error || 'Failed to load dashboard stats')
-      }
+      // For now, just load mock data since we're not using real APIs
+      await loadMockDashboard()
     } catch (error) {
       setDashboardError('Network error loading dashboard stats')
     } finally {
