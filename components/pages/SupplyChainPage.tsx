@@ -166,68 +166,68 @@ function SupplyChainGrid({
                 <div 
                   key={`${widget.id}-${widget.order}-${forceUpdate}`} 
                   style={{ gridColumn: `span ${colSpan}` }}
-                  className={`
-                    transition-all duration-200
-                    ${isDragOver ? 'ring-2 ring-blue-500 ring-opacity-50 bg-blue-50' : ''}
-                    ${isActive ? 'opacity-50' : ''}
-                  `}
+                                   className={`
+                   transition-all duration-200
+                   ${isDragOver ? 'ring-2 ring-blue-500 ring-opacity-50 bg-blue-50 dark:bg-blue-900/20' : ''}
+                   ${isActive ? 'opacity-50' : ''}
+                 `}
                 >
                   <WidgetFrame widget={widget}>
-                    {widget.id === 'active-suppliers-metric' && (
-                      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300">
+                                         {widget.id === 'active-suppliers-metric' && (
+                       <div>
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-neutral-600">Active Suppliers</p>
-                            <p className="text-3xl font-bold text-neutral-800 mt-1">47</p>
-                            <p className="text-xs text-green-600 mt-1">+6% this quarter</p>
+                            <p className="text-sm font-medium text-muted-foreground">Active Suppliers</p>
+                            <p className="text-3xl font-bold text-foreground mt-1">47</p>
+                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">+6% this quarter</p>
                           </div>
-                          <div className="p-3 bg-blue-100 rounded-xl">
-                            <Users2 className="h-6 w-6 text-blue-600" />
+                          <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                            <Users2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                           </div>
                         </div>
                       </div>
                     )}
                     
-                    {widget.id === 'on-time-delivery-metric' && (
-                      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300">
+                                         {widget.id === 'on-time-delivery-metric' && (
+                       <div>
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-neutral-600">On-Time Delivery</p>
-                            <p className="text-3xl font-bold text-neutral-800 mt-1">94.2%</p>
-                            <p className="text-xs text-green-600 mt-1">Above target</p>
+                            <p className="text-sm font-medium text-muted-foreground">On-Time Delivery</p>
+                            <p className="text-3xl font-bold text-foreground mt-1">94.2%</p>
+                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">Above target</p>
                           </div>
-                          <div className="p-3 bg-green-100 rounded-xl">
-                            <CheckCircle className="h-6 w-6 text-green-600" />
+                          <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                            <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
                           </div>
                         </div>
                       </div>
                     )}
                     
-                    {widget.id === 'cost-savings-metric' && (
-                      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300">
+                                         {widget.id === 'cost-savings-metric' && (
+                       <div>
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-neutral-600">Cost Savings</p>
-                            <p className="text-3xl font-bold text-neutral-800 mt-1">£127K</p>
-                            <p className="text-xs text-green-600 mt-1">+£23K this month</p>
+                            <p className="text-sm font-medium text-muted-foreground">Cost Savings</p>
+                            <p className="text-3xl font-bold text-foreground mt-1">£127K</p>
+                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">+£23K this month</p>
                           </div>
-                          <div className="p-3 bg-green-100 rounded-xl">
-                            <TrendingUp className="h-6 w-6 text-blue-600" />
+                          <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                            <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                           </div>
                         </div>
                       </div>
                     )}
                     
-                    {widget.id === 'quality-score-metric' && (
-                      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 hover:shadow-md transition-all duration-300">
+                                         {widget.id === 'quality-score-metric' && (
+                       <div>
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-neutral-600">Quality Score</p>
-                            <p className="text-3xl font-bold text-neutral-800 mt-1">4.7</p>
-                            <p className="text-xs text-green-600 mt-1">High performance</p>
+                            <p className="text-sm font-medium text-muted-foreground">Quality Score</p>
+                            <p className="text-3xl font-bold text-foreground mt-1">4.7</p>
+                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">High performance</p>
                           </div>
-                          <div className="p-3 bg-amber-100 rounded-xl">
-                            <Award className="h-6 w-6 text-amber-600" />
+                          <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                            <Award className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                           </div>
                         </div>
                       </div>
@@ -250,12 +250,12 @@ function SupplyChainGrid({
               `}
             >
               <WidgetFrame widget={widgets.find(w => w.id === 'supplier-directory')!}>
-                <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 overflow-hidden">
-                  <div className="p-6 border-b border-neutral-200">
+                                 <div className="overflow-hidden">
+                  <div className="p-6 border-b border-border">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div>
-                        <h2 className="text-xl font-semibold text-neutral-800">Supplier Directory</h2>
-                        <p className="text-neutral-500 text-sm mt-1">Manage and monitor your supplier network</p>
+                        <h2 className="text-xl font-semibold text-foreground">Supplier Directory</h2>
+                        <p className="text-muted-foreground text-sm mt-1">Manage and monitor your supplier network</p>
                       </div>
                       
                       <div className="flex items-center gap-3">
@@ -266,7 +266,7 @@ function SupplyChainGrid({
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="h-9 px-3 rounded-lg border-neutral-200 hover:bg-neutral-100"
+                          className="h-9 px-3 rounded-lg border-border hover:bg-accent hover:text-accent-foreground"
                           onClick={() => setShowFullScreenSuppliers(true)}
                         >
                           View All
@@ -281,12 +281,12 @@ function SupplyChainGrid({
                           placeholder="Search suppliers..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full"
+                          className="w-full bg-background border-border text-foreground placeholder:text-muted-foreground"
                         />
                       </div>
                       
                       <Select value={filterCategory} onValueChange={setFilterCategory}>
-                        <SelectTrigger className="w-full sm:w-48">
+                        <SelectTrigger className="w-full sm:w-48 bg-background border-border text-foreground">
                           <SelectValue placeholder="All Categories" />
                         </SelectTrigger>
                         <SelectContent>
@@ -299,7 +299,7 @@ function SupplyChainGrid({
                       </Select>
                       
                       <Select value={filterRegion} onValueChange={setFilterRegion}>
-                        <SelectTrigger className="w-full sm:w-48">
+                        <SelectTrigger className="w-full sm:w-48 bg-background border-border text-foreground">
                           <SelectValue placeholder="All Regions" />
                         </SelectTrigger>
                         <SelectContent>
@@ -317,20 +317,20 @@ function SupplyChainGrid({
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow>
+                        <TableRow className="border-border hover:bg-accent/50">
                           <TableHead className="w-12"></TableHead>
-                          <TableHead>Supplier</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Region</TableHead>
-                          <TableHead>Performance</TableHead>
-                          <TableHead>Cost/Unit</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
+                          <TableHead className="text-foreground">Supplier</TableHead>
+                          <TableHead className="text-foreground">Category</TableHead>
+                          <TableHead className="text-foreground">Region</TableHead>
+                          <TableHead className="text-foreground">Performance</TableHead>
+                          <TableHead className="text-foreground">Cost/Unit</TableHead>
+                          <TableHead className="text-foreground">Status</TableHead>
+                          <TableHead className="text-right text-foreground">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredSuppliers.map((supplier) => (
-                          <TableRow key={supplier.id} className="hover:bg-neutral-50">
+                          <TableRow key={supplier.id} className="border-border hover:bg-accent/50">
                             <TableCell>
                               <Checkbox 
                                 checked={supplierComparison.includes(supplier.name)}
@@ -340,38 +340,41 @@ function SupplyChainGrid({
                             <TableCell>
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8">
-                                  <AvatarFallback className="text-xs">{supplier.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                                  <AvatarFallback className="text-xs bg-muted text-foreground">{supplier.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <p className="font-medium text-neutral-800">{supplier.name}</p>
-                                  <p className="text-xs text-neutral-500">{supplier.email}</p>
+                                  <p className="font-medium text-foreground">{supplier.name}</p>
+                                  <p className="text-xs text-muted-foreground">{supplier.email}</p>
                                 </div>
                               </div>
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs border-border text-foreground">
                                 {supplier.category}
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              <span className="text-sm text-neutral-600">{supplier.region}</span>
+                              <span className="text-sm text-muted-foreground">{supplier.region}</span>
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium">{supplier.score}/5.0</span>
+                                <span className="text-sm font-medium text-foreground">{supplier.score}/5.0</span>
                                 <Progress value={supplier.score * 20} className="w-16 h-2" />
                               </div>
                             </TableCell>
                             <TableCell>
-                              <span className="text-sm font-medium">£{supplier.costPerUnit}</span>
+                              <span className="text-sm font-medium text-foreground">£{supplier.costPerUnit}</span>
                             </TableCell>
                             <TableCell>
-                              <Badge variant={supplier.approved ? "default" : "secondary"}>
+                              <Badge 
+                                variant={supplier.approved ? "default" : "secondary"}
+                                className={supplier.approved ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"}
+                              >
                                 {supplier.approved ? "Approved" : "Pending"}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" className="hover:bg-accent hover:text-accent-foreground">
                                 <Eye className="h-4 w-4" />
                               </Button>
                             </TableCell>
@@ -389,46 +392,46 @@ function SupplyChainGrid({
       
       <DragOverlay>
         {activeId && activeWidget ? (
-          <div className="bg-white rounded-2xl shadow-xl border border-neutral-200 p-6 opacity-90 scale-105 transform rotate-1">
-            <div className="text-lg font-semibold text-neutral-800">{activeWidget.title}</div>
+          <div className="glass-card shadow-xl p-6 opacity-90 scale-105 transform rotate-1">
+            <div className="text-lg font-semibold text-foreground">{activeWidget.title}</div>
           </div>
         ) : null}
       </DragOverlay>
 
       {/* Full Screen Suppliers Modal */}
       {showFullScreenSuppliers && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-card shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-neutral-200">
+            <div className="flex items-center justify-between p-6 border-b border-border">
               <div>
-                <h2 className="text-2xl font-semibold text-neutral-800">📋 All Suppliers Directory</h2>
-                <p className="text-neutral-500 mt-1">Complete supplier network with detailed information</p>
+                <h2 className="text-2xl font-semibold text-foreground">📋 All Suppliers Directory</h2>
+                <p className="text-muted-foreground mt-1">Complete supplier network with detailed information</p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowFullScreenSuppliers(false)}
-                className="h-10 w-10 p-0 hover:bg-neutral-100"
+                className="h-10 w-10 p-0 hover:bg-accent hover:text-accent-foreground"
               >
                 <X className="h-5 w-5" />
               </Button>
             </div>
 
             {/* Filters */}
-            <div className="p-6 border-b border-neutral-200 bg-neutral-50">
+            <div className="p-6 border-b border-border bg-muted/30">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1 max-w-sm">
                   <Input
                     placeholder="Search suppliers..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full"
+                    className="w-full bg-background border-border text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
                 
                 <Select value={filterCategory} onValueChange={setFilterCategory}>
-                  <SelectTrigger className="w-full sm:w-48">
+                  <SelectTrigger className="w-full sm:w-48 bg-background border-border text-foreground">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
@@ -441,7 +444,7 @@ function SupplyChainGrid({
                 </Select>
                 
                 <Select value={filterRegion} onValueChange={setFilterRegion}>
-                  <SelectTrigger className="w-full sm:w-48">
+                  <SelectTrigger className="w-full sm:w-48 bg-background border-border text-foreground">
                     <SelectValue placeholder="All Regions" />
                   </SelectTrigger>
                   <SelectContent>
@@ -460,20 +463,20 @@ function SupplyChainGrid({
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="border-border hover:bg-accent/50">
                       <TableHead className="w-12"></TableHead>
-                      <TableHead>Supplier</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Region</TableHead>
-                      <TableHead>Performance</TableHead>
-                      <TableHead>Cost/Unit</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-foreground">Supplier</TableHead>
+                      <TableHead className="text-foreground">Category</TableHead>
+                      <TableHead className="text-foreground">Region</TableHead>
+                      <TableHead className="text-foreground">Performance</TableHead>
+                      <TableHead className="text-foreground">Cost/Unit</TableHead>
+                      <TableHead className="text-foreground">Status</TableHead>
+                      <TableHead className="text-right text-foreground">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredSuppliers.map((supplier) => (
-                      <TableRow key={supplier.id} className="hover:bg-neutral-50">
+                      <TableRow key={supplier.id} className="border-border hover:bg-accent/50">
                         <TableCell>
                           <Checkbox 
                             checked={supplierComparison.includes(supplier.name)}
@@ -483,49 +486,49 @@ function SupplyChainGrid({
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarFallback className="text-xs">{supplier.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                              <AvatarFallback className="text-xs bg-muted text-foreground">{supplier.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium text-neutral-800">{supplier.name}</p>
-                              <p className="text-xs text-neutral-500">{supplier.email}</p>
+                              <p className="font-medium text-foreground">{supplier.name}</p>
+                              <p className="text-xs text-muted-foreground">{supplier.email}</p>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-xs border-border text-foreground">
                             {supplier.category}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <MapPin className="h-3 w-3 text-neutral-500" />
-                            <span className="text-sm">{supplier.region}</span>
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">{supplier.region}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <div className="w-16 bg-neutral-200 rounded-full h-2">
+                            <div className="w-16 bg-muted rounded-full h-2">
                               <div 
                                 className="bg-green-600 h-2 rounded-full" 
                                 style={{ width: `${supplier.performance}%` }}
                               />
                             </div>
-                            <span className="text-sm font-medium">{supplier.performance}%</span>
+                            <span className="text-sm font-medium text-foreground">{supplier.performance}%</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm font-medium">${supplier.costPerUnit}</span>
+                          <span className="text-sm font-medium text-foreground">${supplier.costPerUnit}</span>
                         </TableCell>
                         <TableCell>
                           <Badge 
                             variant={supplier.approved ? "default" : "secondary"}
-                            className={supplier.approved ? "bg-green-100 text-green-800" : "bg-neutral-100 text-neutral-600"}
+                            className={supplier.approved ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"}
                           >
                             {supplier.approved ? "Approved" : "Pending"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-accent hover:text-accent-foreground">
                             <Eye className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -537,13 +540,13 @@ function SupplyChainGrid({
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-neutral-200 bg-neutral-50">
+            <div className="p-6 border-t border-border bg-muted/30">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-neutral-500">
+                <div className="text-sm text-muted-foreground">
                   Showing {filteredSuppliers.length} of {supplierPerformanceData.length} suppliers
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" className="border-border hover:bg-accent hover:text-accent-foreground">
                     Export Data
                   </Button>
                   <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -635,24 +638,24 @@ export default function SupplyChainPage(props: SupplyChainPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Edit Mode Notification */}
-      {editMode && (
-        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-sm text-blue-800 mb-2">
-            <strong>Edit Mode Active:</strong> Drag widgets using the blue handle (⋮⋮) to reorder them, or use the side panel controls.
-          </p>
-          <div className="text-xs text-blue-600">
-            <strong>Tip:</strong> Toggle widget visibility and sizes from the right panel.
-          </div>
-        </div>
-      )}
-      
-      <div className={editMode ? "pr-[420px]" : ""}>
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-800">Supply Chain</h1>
-          <p className="text-neutral-500 mt-1">Manage your supplier network and performance analytics</p>
-        </div>
+             {/* Edit Mode Notification */}
+       {editMode && (
+         <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+           <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
+             <strong>Edit Mode Active:</strong> Drag widgets using the blue handle (⋮⋮) to reorder them, or use the side panel controls.
+           </p>
+           <div className="text-xs text-blue-600 dark:text-blue-300">
+             <strong>Tip:</strong> Toggle widget visibility and sizes from the right panel.
+           </div>
+         </div>
+       )}
+       
+       <div className={editMode ? "pr-[420px]" : ""}>
+         {/* Page Header */}
+         <div className="mb-6">
+           <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">Supply Chain</h1>
+           <p className="text-muted-foreground mt-1">Manage your supplier network and performance analytics</p>
+         </div>
 
         {/* Supply Chain Grid with Drag-and-Drop */}
         <SupplyChainGrid 

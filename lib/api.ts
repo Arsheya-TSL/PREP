@@ -9,7 +9,7 @@ export interface APIResponse<T> {
 }
 
 // Base API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
 const API_TIMEOUT = 10000 // 10 seconds
 
 // Generic API client
@@ -86,6 +86,19 @@ class APIClient {
 
   async delete<T>(endpoint: string): Promise<APIResponse<T>> {
     return this.request<T>(endpoint, { method: 'DELETE' })
+  }
+
+  async fetchText(path: string): Promise<string> {
+    const url = path.startsWith('http') ? path : `${path}`
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout)
+    try {
+      const res = await fetch(url, { signal: controller.signal })
+      if (!res.ok) throw new Error(`Failed to fetch: ${url}`)
+      return await res.text()
+    } finally {
+      clearTimeout(timeoutId)
+    }
   }
 }
 

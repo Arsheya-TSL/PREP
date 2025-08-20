@@ -52,12 +52,12 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
   }, [mode, isMobile, setMode])
 
   return (
-    <div className="min-h-screen bg-neutral-50 overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden">
                            {/* Sidebar */}
         <aside 
           id="app-sidebar"
           className={`
-            fixed left-0 top-0 z-40 h-full bg-white border-r border-neutral-200 transition-all duration-300 ease-out
+            fixed left-0 top-0 z-40 h-full bg-card border-r border-border transition-all duration-300 ease-out
             ${mode === 'expanded' ? 'w-[248px]' : mode === 'collapsed' ? 'w-[72px]' : 'w-[72px]'}
             ${mode === 'collapsed' ? 'rounded-r-2xl' : ''}
           `}
@@ -85,7 +85,7 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
            `}
          >
           {/* Header */}
-          <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-neutral-200 shadow-sm">
+          <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-md border-b border-border shadow-sm">
             <div className="flex items-center justify-between px-6 py-4 flex-wrap gap-4">
                              <div className="flex items-center gap-6 flex-wrap">
                 {/* Sidebar Toggle Button */}
@@ -96,7 +96,7 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
                   aria-controls="app-sidebar"
                   aria-expanded={mode !== 'hidden'}
                   aria-pressed={mode !== 'hidden'}
-                  className="h-11 w-11 rounded-xl hover:bg-neutral-100 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                  className="h-11 w-11 rounded-xl hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   {mode === 'hidden' ? (
                     <PanelLeft className="h-5 w-5" />
@@ -107,7 +107,7 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
 
                                  {/* Project Filter */}
                  <div className="w-48">
-                 <select className="w-full h-11 px-3 text-sm bg-white border border-neutral-200 rounded-lg focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none shadow-sm">
+                 <select className="w-full h-11 px-3 text-sm bg-card border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none shadow-sm">
                    <option>All Projects</option>
                    <option>Active Projects</option>
                    <option>Completed Projects</option>
@@ -120,7 +120,7 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
                   <input
                     type="text"
                     placeholder="Search projects, suppliers..."
-                    className="w-full h-11 pl-10 pr-4 text-sm bg-white border border-neutral-200 rounded-lg focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="w-full h-11 pl-10 pr-4 text-sm bg-card border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                   />
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">🔍</span>
                 </div>
@@ -130,7 +130,7 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
                          <div className="flex items-center gap-4 flex-wrap">
                              {/* Date Range */}
                <div className="w-48">
-                 <select className="w-full h-11 px-3 text-sm bg-white border border-neutral-200 rounded-lg focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none shadow-sm">
+                 <select className="w-full h-11 px-3 text-sm bg-card border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none shadow-sm">
                    <option>Monthly view</option>
                    <option>Quarterly view</option>
                    <option>Yearly view</option>
@@ -142,7 +142,7 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
                <Button 
                  variant="ghost" 
                  onClick={() => setEditMode(!editMode)}
-                 className="h-11 px-4 rounded-xl hover:bg-neutral-100"
+                 className="h-11 px-4 rounded-xl hover:bg-accent"
                >
                  {editMode ? "Done" : "Customize"}
                </Button>
@@ -150,16 +150,16 @@ export default function AppLayout({ children, activeTab, setActiveTab }: AppLayo
                  <Button 
                    variant="ghost" 
                    onClick={() => setEditMode(false)}
-                   className="h-11 px-4 rounded-xl hover:bg-neutral-100 text-red-600 hover:text-red-700"
+                   className="h-11 px-4 rounded-xl hover:bg-accent text-red-600 hover:text-red-700"
                  >
                    Exit Edit Mode
                  </Button>
                )}
 
               {/* Notifications */}
-              <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-xl hover:bg-neutral-100">
+              <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-xl hover:bg-accent">
                 <span className="text-lg">🔔</span>
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse"></div>
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-background animate-pulse"></div>
               </Button>
 
               {/* Avatar */}

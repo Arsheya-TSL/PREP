@@ -1,4 +1,6 @@
 import { WidgetSize } from './types'
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
 
 // Enhanced responsive grid system with proper breakpoints
 export const getResponsiveGridCols = (screenSize: 'mobile' | 'tablet' | 'desktop'): string => {
@@ -154,6 +156,10 @@ export const getHoverClasses = (): string => {
   return 'hover:shadow-lg hover:scale-[1.02] hover:z-10'
 }
 
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
 // Responsive breakpoint utilities
 export const getScreenSize = (width: number): 'mobile' | 'tablet' | 'desktop' => {
   if (width < 768) return 'mobile'
@@ -278,4 +284,131 @@ export const throttle = <T extends (...args: any[]) => any>(
       setTimeout(() => inThrottle = false, limit)
     }
   }
+}
+
+// Lightweight CSV parser for simple, unquoted CSVs
+export function parseSimpleCSV(text: string): Array<Record<string, string>> {
+  const lines = text.split(/\r?\n/).filter(Boolean)
+  if (lines.length <= 1) return []
+  const header = lines[0].split(',').map(s => s.trim())
+  return lines.slice(1).map(line => {
+    const cols = line.split(',')
+    const rec: Record<string, string> = {}
+    header.forEach((h, i) => { rec[h.toLowerCase()] = (cols[i] || '').trim() })
+    return rec
+  })
+}
+
+// Infer supplier categories from a work package name using simple keyword matching
+export function inferCategoriesFromWorkPackageName(name: string): string[] {
+  const n = name.toLowerCase()
+  const categories = new Set<string>()
+
+  // Explicit mapping by keywords (can be extended or made exact-name map)
+  const WORK_PACKAGE_TO_CATEGORIES: Array<{ key: string; cats: string[] }> = [
+    { key: 'demolition', cats: ['General', 'Structural'] },
+    { key: 'earthworks', cats: ['Structural'] },
+    { key: 'temporary drainage', cats: ['Plumbing'] },
+    { key: 'dewatering', cats: ['Plumbing'] },
+    { key: 'archaeological', cats: ['General'] },
+    { key: 'uxo', cats: ['General'] },
+    { key: 'cfa', cats: ['Structural'] },
+    { key: 'precast', cats: ['Structural'] },
+    { key: 'rigid inclusions', cats: ['Structural'] },
+    { key: 'vibro', cats: ['Structural'] },
+    { key: 'structural steel', cats: ['Structural'] },
+    { key: 'steel frame', cats: ['Structural'] },
+    { key: 'retaining wall', cats: ['Structural'] },
+    { key: 'dock', cats: ['Structural'] },
+    { key: 'stairs', cats: ['Structural'] },
+    { key: 'slab', cats: ['Structural', 'Interior'] },
+    { key: 'slabs', cats: ['Structural', 'Interior'] },
+    { key: 'block paving', cats: ['General'] },
+    { key: 'below ground drainage', cats: ['Plumbing'] },
+    { key: 'drainage', cats: ['Plumbing'] },
+    { key: 'pumps', cats: ['HVAC'] },
+    { key: 'manholes', cats: ['Plumbing'] },
+    { key: 'tanks', cats: ['Plumbing'] },
+    { key: 'interceptors', cats: ['Plumbing'] },
+    { key: 'attenuation', cats: ['Plumbing'] },
+    { key: 'utilities', cats: ['General'] },
+    { key: 'section 278', cats: ['General'] },
+    { key: 'intumescent', cats: ['Interior'] },
+    { key: 'firestopping', cats: ['Interior'] },
+    { key: 'fencing', cats: ['General'] },
+    { key: 'gates', cats: ['General'] },
+    { key: 'refrigeration', cats: ['HVAC'] },
+    { key: 'gatehouse', cats: ['General'] },
+    { key: 'cladding', cats: ['Interior'] },
+    { key: 'façade', cats: ['Interior'] },
+    { key: 'facade', cats: ['Interior'] },
+    { key: 'roofing', cats: ['Interior'] },
+    { key: 'roof', cats: ['Interior'] },
+    { key: 'brick slips', cats: ['Interior'] },
+    { key: 'siphonic roof drainage', cats: ['Plumbing'] },
+    { key: 'photovoltaic', cats: ['Electrical', 'Technology'] },
+    { key: 'pv', cats: ['Electrical', 'Technology'] },
+    { key: 'louvres', cats: ['Interior'] },
+    { key: 'curtain walling', cats: ['Interior'] },
+    { key: 'glazing', cats: ['Interior'] },
+    { key: 'dock levellers', cats: ['Structural'] },
+    { key: 'fire suppression', cats: ['HVAC'] },
+    { key: 'sprinklers', cats: ['HVAC'] },
+    { key: 'lightning protection', cats: ['Electrical'] },
+    { key: 'mechanical & electrical', cats: ['HVAC', 'Electrical'] },
+    { key: 'mechanical and electrical', cats: ['HVAC', 'Electrical'] },
+    { key: 'concrete yards', cats: ['Structural'] },
+    { key: 'solar shading', cats: ['Technology'] },
+    { key: 'personnel doors', cats: ['Interior'] },
+    { key: 'roller shutters', cats: ['Interior'] },
+    { key: 'lifts', cats: ['Technology'] },
+    { key: 'dumb waiter', cats: ['Technology'] },
+    { key: 'screeding', cats: ['General'] },
+    { key: 'resin finish', cats: ['General'] },
+    { key: 'asphalt', cats: ['General'] },
+    { key: 'green wall', cats: ['Interior'] },
+    { key: 'floor finishes', cats: ['Interior'] },
+    { key: 'turnstiles', cats: ['Technology'] },
+    { key: 'coldroom', cats: ['Interior'] },
+    { key: 'whitewall', cats: ['Interior'] },
+    { key: 'firewall', cats: ['Interior'] },
+    { key: 'partitions', cats: ['Interior'] },
+    { key: 'ceilings', cats: ['Interior'] },
+    { key: 'wall finishes', cats: ['Interior'] },
+    { key: 'vanity', cats: ['Interior'] },
+    { key: 'kitchenette', cats: ['Interior'] },
+    { key: 'ips panel', cats: ['Interior'] },
+    { key: 'raised access floor', cats: ['Interior'] },
+    { key: 'blockwork', cats: ['Structural'] },
+    { key: 'barriers', cats: ['Structural'] },
+    { key: 'handrails', cats: ['Structural'] },
+    { key: 'caging', cats: ['Structural'] },
+    { key: 'kerbs', cats: ['Structural'] },
+    { key: 'bollards', cats: ['Structural'] },
+    { key: 'external shelters', cats: ['General'] },
+    { key: 'landscaping', cats: ['General'] },
+    { key: 'line painting', cats: ['General'] },
+    { key: 'demarcations', cats: ['General'] },
+    { key: 'signage', cats: ['General'] },
+    { key: 'bird protection', cats: ['General'] },
+    { key: 'mastic sealant', cats: ['General'] },
+  ]
+
+  WORK_PACKAGE_TO_CATEGORIES.forEach(({ key, cats }) => {
+    if (n.includes(key)) cats.forEach(c => categories.add(c))
+  })
+
+  // Fallback keywords
+  if (categories.size === 0) {
+    if (n.includes('electr')) categories.add('Electrical')
+    if (n.includes('hvac') || n.includes('mechanical')) categories.add('HVAC')
+    if (n.includes('plumb') || n.includes('drainage')) categories.add('Plumbing')
+    if (n.includes('steel') || n.includes('frame') || n.includes('struct')) categories.add('Structural')
+    if (n.includes('cladding') || n.includes('façade') || n.includes('facade') || n.includes('roof')) categories.add('Interior')
+    if (n.includes('floor') || n.includes('partition') || n.includes('glaz') || n.includes('doors') || n.includes('louvres')) categories.add('Interior')
+    if (n.includes('ict') || n.includes('data') || n.includes('technology')) categories.add('Technology')
+  }
+
+  if (categories.size === 0) categories.add('General')
+  return Array.from(categories)
 }

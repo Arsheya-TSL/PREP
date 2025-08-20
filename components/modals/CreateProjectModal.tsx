@@ -197,8 +197,8 @@ export default function CreateProjectModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[1000px] h-[700px] max-w-none p-8 flex flex-col">
-        <DialogHeader className="flex-shrink-0">
+      <DialogContent className="w-[1000px] h-[700px] max-w-none p-8 flex flex-col bg-background/80 backdrop-blur-md border border-border">
+        <DialogHeader className="flex-shrink-0 border-b border-border bg-card/50 rounded-t-lg">
           <DialogTitle className="text-2xl font-bold flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Building2 className="h-6 w-6 text-primary" />

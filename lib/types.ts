@@ -90,6 +90,13 @@ export interface ActiveITT {
   region: string
 }
 
+export interface WorkPackage {
+  coinsCode: string
+  description: string
+  id: number
+  category?: string
+}
+
 export interface Insight {
   type: string
   title: string

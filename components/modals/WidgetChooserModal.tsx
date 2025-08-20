@@ -33,10 +33,10 @@ export default function WidgetChooserModal({ isOpen, onClose, onChooseStandard, 
       console.log('🎭 WidgetChooserModal onOpenChange:', open)
       if (!open) onClose()
     }}>
-      <DialogContent className="w-[1200px] h-[800px] bg-white p-6 !max-w-none">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-xl font-semibold">
-            <Sparkles className="h-6 w-6 text-blue-600" />
+      <DialogContent className="w-[1200px] h-[800px] bg-background/80 backdrop-blur-md border border-border p-6 !max-w-none">
+        <DialogHeader className="border-b border-border bg-card/50 rounded-t-lg">
+          <DialogTitle className="flex items-center gap-3 text-xl font-semibold text-foreground">
+            <Sparkles className="h-6 w-6 text-primary" />
             Create Widget
           </DialogTitle>
         </DialogHeader>

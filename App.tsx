@@ -93,6 +93,7 @@ export default function App() {
         {state.activeTab === "projects" && (
           <ProjectsPage 
             comparisonProjects={state.comparisonProjects}
+            setComparisonProjects={state.setComparisonProjects}
             setShowComparison={state.setShowComparison}
             showCreateProject={state.showCreateProject}
             setShowCreateProject={state.setShowCreateProject}

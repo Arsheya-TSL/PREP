@@ -12,6 +12,7 @@ import { projects, regionData } from "../../lib/constants"
 // Working World Map Canvas Component (from WorldMapPage)
 function WorldMapCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedCountry, setSelectedCountry] = useState('')
   const [countryData, setCountryData] = useState<any>(null)
@@ -23,6 +24,13 @@ function WorldMapCanvas() {
   const isDraggingRef = useRef<boolean>(false)
 
   useEffect(() => {
+    const fsHandler = () => setIsFullscreen(!!document.fullscreenElement)
+    fsHandler()
+    document.addEventListener('fullscreenchange', fsHandler)
+    return () => document.removeEventListener('fullscreenchange', fsHandler)
+  }, [])
+
+  useEffect(() => {
     if (!containerRef.current) return
   
 
@@ -31,7 +39,18 @@ function WorldMapCanvas() {
     const wrapper = document.createElement('div')
     wrapper.style.position = 'relative'
     wrapper.style.width = '100%'
-    wrapper.style.height = '500px' // Match the target height
+    const setWrapperHeight = () => {
+      try {
+        if (document.fullscreenElement) {
+          wrapper.style.height = `${window.innerHeight}px`
+        } else {
+          wrapper.style.height = '500px'
+        }
+      } catch {
+        wrapper.style.height = '500px'
+      }
+    }
+    setWrapperHeight()
     wrapper.style.borderRadius = '12px'
     wrapper.style.overflow = 'hidden'
     wrapper.style.background = '#1a1a1a'
@@ -44,8 +63,11 @@ function WorldMapCanvas() {
     chartDiv.style.height = '100%'
     wrapper.appendChild(chartDiv)
     containerRef.current.appendChild(wrapper)
+    const onFsChange = () => { setWrapperHeight(); setIsFullscreen(!!document.fullscreenElement) }
+    const onResize = () => setWrapperHeight()
+    document.addEventListener('fullscreenchange', onFsChange)
+    window.addEventListener('resize', onResize)
     
-
 
 
 
@@ -76,7 +98,7 @@ function WorldMapCanvas() {
         if (disposed) return
         
         const am5viewer = (window as any).am5viewer
-
+        
         
         if (!am5viewer) throw new Error('am5viewer not available')
         if (typeof am5viewer.create !== 'function') throw new Error('am5viewer.create is not a function')
@@ -221,12 +243,14 @@ function WorldMapCanvas() {
         }
       } catch {}
       chartRef.current = null
+      document.removeEventListener('fullscreenchange', onFsChange)
+      window.removeEventListener('resize', onResize)
       if (containerRef.current) containerRef.current.innerHTML = ''
     }
   }, [is3D])
 
   return (
-    <div className="relative" style={{ height: '500px', backgroundColor: '#0a1426' }}>
+    <div className="relative" style={{ height: isFullscreen ? '100vh' : '500px', backgroundColor: '#0a1426' }}>
       <div ref={containerRef} className="w-full h-full" />
       
       {/* 3D Toggle Button */}
@@ -237,7 +261,7 @@ function WorldMapCanvas() {
           setCountryData(null)
           setIs3D((v) => !v)
         }}
-        className="absolute bottom-1 left-0.5 px-6 py-2 bg-gray-600 text-white text-base font-medium rounded-md shadow-md hover:bg-gray-700 transition-colors z-[1001]"
+        className={`absolute bottom-1 left-0.5 px-6 py-2 bg-background/90 backdrop-blur text-foreground text-base font-medium rounded-md shadow-md hover:bg-accent hover:text-accent-foreground transition-colors z-[1001] border border-border ${isFullscreen ? 'fixed bottom-0 left-0 rounded-none' : 'absolute bottom-0 left-0 rounded-none'}`}
       >
         {is3D ? '2D' : '3D'}
       </button>
@@ -247,7 +271,7 @@ function WorldMapCanvas() {
       {/* Country Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4 transform scale-100 transition-transform duration-300">
+          <div className="bg-background rounded-lg p-6 max-w-md mx-4 transform scale-100 transition-transform duration-300">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-gray-800">{selectedCountry}</h3>
               <button 
@@ -272,6 +296,7 @@ function WorldMapCanvas() {
 
 interface ProjectsPageProps {
   comparisonProjects: number[]
+  setComparisonProjects: (fn: (prev: number[]) => number[]) => void
   setShowComparison: (show: boolean) => void
   showCreateProject: boolean
   setShowCreateProject: (show: boolean) => void
@@ -296,6 +321,7 @@ interface ProjectsPageProps {
 
 export default function ProjectsPage({
   comparisonProjects,
+  setComparisonProjects,
   setShowComparison,
   showCreateProject,
   setShowCreateProject,
@@ -331,10 +357,113 @@ export default function ProjectsPage({
   const [showAllRegionsModal, setShowAllRegionsModal] = useState(false)
   const [regionSearch, setRegionSearch] = useState("")
   
+  // Project detail modal state
+  const [selectedProject, setSelectedProject] = useState<any>(null)
+  const [showProjectModal, setShowProjectModal] = useState(false)
+  
+  // Projects state
+  const [existingProjects, setExistingProjects] = useState<any[]>([
+    {
+      id: 'existing-1',
+      name: 'Waterfront Office Complex',
+      country: 'UK',
+      location: 'London, UK',
+      progress: 75,
+      score: 94,
+      status: 'On Track',
+      startDate: '2024-01-15',
+      endDate: '2024-12-20',
+      description: 'Modern 15-story office complex with sustainable design features',
+      budget: '£2.8M',
+      sizeBucket: '2000-10000',
+      team: 12,
+      suppliers: 8,
+      issues: 1,
+      image: '🏢'
+    },
+    {
+      id: 'existing-2',
+      name: 'City Hospital Extension',
+      country: 'UK',
+      location: 'Manchester, UK',
+      progress: 45,
+      score: 87,
+      status: 'On Track',
+      startDate: '2024-03-01',
+      endDate: '2025-06-30',
+      description: 'Critical care unit expansion with state-of-the-art medical facilities',
+      budget: '£4.2M',
+      sizeBucket: '10000-50000',
+      team: 18,
+      suppliers: 12,
+      issues: 0,
+      image: '🏥'
+    },
+    {
+      id: 'existing-3',
+      name: 'Metro Station Upgrade',
+      country: 'Germany',
+      location: 'Berlin, Germany',
+      progress: 92,
+      score: 96,
+      status: 'Ahead',
+      startDate: '2023-11-01',
+      endDate: '2024-08-15',
+      description: 'Complete renovation of central metro station with accessibility improvements',
+      budget: '€1.2M',
+      sizeBucket: '500-2000',
+      team: 8,
+      suppliers: 5,
+      issues: 1,
+      image: '🚇'
+    },
+    {
+      id: 'existing-4',
+      name: 'Cultural Center Restoration',
+      country: 'France',
+      location: 'Paris, France',
+      progress: 68,
+      score: 89,
+      status: 'On Track',
+      startDate: '2024-02-10',
+      endDate: '2024-11-30',
+      description: 'Historical building restoration preserving architectural heritage',
+      budget: '€950K',
+      sizeBucket: '500-2000',
+      team: 6,
+      suppliers: 4,
+      issues: 0,
+      image: '🏛️'
+    },
+    {
+      id: 'existing-5',
+      name: 'Green Housing Project',
+      country: 'Netherlands',
+      location: 'Amsterdam, Netherlands',
+      progress: 55,
+      score: 91,
+      status: 'On Track',
+      startDate: '2024-01-20',
+      endDate: '2025-02-28',
+      description: 'Sustainable residential complex with renewable energy systems',
+      budget: '€1.8M',
+      sizeBucket: '2000-10000',
+      team: 10,
+      suppliers: 7,
+      issues: 2,
+      image: '🏘️'
+    }
+  ])
+  
   // Map picker state
   const [showMapPicker, setShowMapPicker] = useState(false)
   const mapRef = useRef<any>(null)
   const markerRef = useRef<any>(null)
+  
+  // Map visibility and overlays
+  const [showMap, setShowMap] = useState<boolean>(true)
+  const [showRegionOverlay, setShowRegionOverlay] = useState<boolean>(true)
+  const mapFullscreenRef = useRef<HTMLDivElement | null>(null)
 
   // Comprehensive list of all countries
   const allCountries = [
@@ -365,7 +494,7 @@ export default function ProjectsPage({
   ]
 
   // Filter countries based on search
-  const filteredCountries = allCountries.filter(country => 
+  const filteredCountries = allCountries.filter(country =>
     country.toLowerCase().includes(countrySearch.toLowerCase())
   ).slice(0, 10) // Limit to 10 results for performance
 
@@ -459,118 +588,6 @@ export default function ProjectsPage({
     }
   }, [showMapPicker])
 
-  // Pre-made projects (existing projects in progress)
-  const existingProjects = [
-    {
-      id: 'existing-1',
-      name: 'Waterfront Office Complex',
-      country: 'UK',
-      location: 'London, UK',
-      progress: 75,
-      score: 94,
-      status: 'On Track',
-      startDate: '2024-01-15',
-      endDate: '2024-12-20',
-      description: 'Modern 15-story office complex with sustainable design features',
-      budget: '£2.8M',
-      sizeBucket: '2000-10000',
-      team: 12,
-      suppliers: 8,
-      issues: 1,
-      image: '🏢'
-    },
-    {
-      id: 'existing-2',
-      name: 'City Hospital Extension',
-      country: 'UK',
-      location: 'Manchester, UK',
-      progress: 45,
-      score: 87,
-      status: 'On Track',
-      startDate: '2024-03-01',
-      endDate: '2025-06-30',
-      description: 'Critical care unit expansion with state-of-the-art medical facilities',
-      budget: '£4.2M',
-      sizeBucket: '10000-50000',
-      team: 18,
-      suppliers: 12,
-      issues: 0,
-      image: '🏥'
-    },
-    {
-      id: 'existing-3',
-      name: 'Metro Station Upgrade',
-      country: 'Germany',
-      location: 'Berlin, Germany',
-      progress: 92,
-      score: 96,
-      status: 'Ahead',
-      startDate: '2023-11-01',
-      endDate: '2024-08-15',
-      description: 'Complete renovation of central metro station with accessibility improvements',
-      budget: '€1.2M',
-      sizeBucket: '500-2000',
-      team: 8,
-      suppliers: 5,
-      issues: 1,
-      image: '🚇'
-    },
-    {
-      id: 'existing-4',
-      name: 'Cultural Center Restoration',
-      country: 'France',
-      location: 'Paris, France',
-      progress: 68,
-      score: 89,
-      status: 'On Track',
-      startDate: '2024-02-10',
-      endDate: '2024-11-30',
-      description: 'Historical building restoration preserving architectural heritage',
-      budget: '€950K',
-      sizeBucket: '500-2000',
-      team: 6,
-      suppliers: 4,
-      issues: 0,
-      image: '🏛️'
-    },
-    {
-      id: 'existing-5',
-      name: 'Green Housing Project',
-      country: 'Netherlands',
-      location: 'Amsterdam, Netherlands',
-      progress: 55,
-      score: 91,
-      status: 'On Track',
-      startDate: '2024-01-20',
-      endDate: '2025-02-28',
-      description: 'Sustainable residential complex with renewable energy systems',
-      budget: '€1.8M',
-      sizeBucket: '2000-10000',
-      team: 10,
-      suppliers: 7,
-      issues: 2,
-      image: '🏘️'
-    },
-    {
-      id: 'existing-6',
-      name: 'Port Expansion Phase 2',
-      country: 'Spain',
-      location: 'Barcelona, Spain',
-      progress: 38,
-      score: 85,
-      status: 'On Track',
-      startDate: '2024-04-01',
-      endDate: '2025-09-15',
-      description: 'Commercial port infrastructure expansion for increased cargo capacity',
-      budget: '€3.1M',
-      sizeBucket: '10000-50000',
-      team: 22,
-      suppliers: 15,
-      issues: 1,
-      image: '🚢'
-    }
-  ]
-
 
 
   // Calculate dynamic regional stats
@@ -645,7 +662,34 @@ export default function ProjectsPage({
   }
 
   const handleCreateTender = () => {
-    // Create the project/tender
+    // Create the project/tender and add it to existing projects (Projects in Progress)
+    const newProject = {
+      id: Date.now(),
+      name: projectFormData.name || 'New Tender',
+      location: selectedCountry || projectFormData.country || 'Global',
+      country: selectedCountry || projectFormData.country || 'Global',
+      progress: 0,
+      budget: parseInt(projectFormData.budget?.replace(/[^\d]/g, '') || '0') || 50000,
+      spent: 0,
+      status: 'On Track',
+      deadline: projectFormData.endDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      satisfaction: 85,
+      size: projectFormData.size || 'Medium',
+      score: 85,
+      team: projectFormData.team || ['Project Manager', 'Site Engineer'],
+      suppliers: 0,
+      issuesReported: 0,
+      reworkCost: 0,
+      image: '🏗️',
+      riskScore: 25,
+      materials: projectFormData.materials || [],
+      tradeCategories: projectFormData.tradeCategories || []
+    }
+    
+    // Add to existing projects (Projects in Progress)
+    setExistingProjects && setExistingProjects(prev => [newProject, ...prev])
+    
+    // Also add to user projects for backward compatibility
     addProject && addProject({ 
       name: projectFormData.name || 'New Tender', 
       country: selectedCountry, 
@@ -718,11 +762,11 @@ export default function ProjectsPage({
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-semibold text-neutral-800">Projects</h1>
-        <p className="text-neutral-500 mt-1">Comprehensive project management and analytics</p>
-      </div>
+             {/* Page Header */}
+       <div className="mb-6">
+         <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">Projects</h1>
+         <p className="text-muted-foreground mt-1">Comprehensive project management and analytics</p>
+       </div>
 
       {/* Action Buttons */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -730,7 +774,7 @@ export default function ProjectsPage({
           <Button
             variant="outline"
             onClick={() => setShowComparison(true)}
-            className="flex items-center gap-2 h-11 px-4 rounded-xl hover:bg-neutral-100 border-neutral-200"
+            className="flex items-center gap-2 h-11 px-4 rounded-xl hover:bg-accent hover:text-accent-foreground border-border"
           >
             <BarChart3 className="h-4 w-4" />
             Compare ({comparisonProjects.length})
@@ -745,15 +789,15 @@ export default function ProjectsPage({
             </Button>
           </DialogTrigger>
           
-          <DialogContent className="w-[60vw] max-w-4xl h-[75vh] !max-w-none bg-gradient-to-br from-slate-50 to-blue-50" style={{ width: '60vw', maxWidth: '900px', zIndex: 50 }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-            <DialogHeader className="border-b border-blue-200 pb-4 bg-white/80 backdrop-blur-sm rounded-t-lg">
+          <DialogContent className="w-[60vw] max-w-4xl h-[75vh] !max-w-none bg-background/80 backdrop-blur-md border border-border" style={{ width: '60vw', maxWidth: '900px', zIndex: 50 }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+            <DialogHeader className="border-b border-border pb-4 bg-card/50 rounded-t-lg">
               <div className="flex items-center justify-between">
                 {/* Left Side - Title */}
                 <div>
-                  <DialogTitle className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  <DialogTitle className="text-2xl font-bold text-foreground">
                     🚀 Create New Tender
                   </DialogTitle>
-                  <DialogDescription className="text-slate-600 text-sm">Complete all steps to create your tender</DialogDescription>
+                  <DialogDescription className="text-muted-foreground">Complete all steps to create your tender</DialogDescription>
                 </div>
                 
                 {/* Right Side - Progress Stepper */}
@@ -764,18 +808,18 @@ export default function ProjectsPage({
                       <div key={step} className="flex items-center">
                         <button
                           onClick={() => setTenderStep(step as 1|2|3|4)}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 shadow-md ${
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 ${
                             step === tenderStep 
-                              ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white scale-110' 
+                              ? 'bg-primary text-primary-foreground scale-110 shadow-lg' 
                               : step < tenderStep 
-                                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' 
-                                : 'bg-white text-slate-400 border border-slate-200 hover:border-blue-300'
+                                ? 'bg-green-500 text-white shadow-md' 
+                                : 'bg-muted text-muted-foreground border border-border hover:bg-accent hover:text-accent-foreground'
                           }`}
                         >
                           {step < tenderStep ? '✓' : step}
                         </button>
                         {index < 3 && (
-                          <div className={`w-4 h-1 mx-1 rounded-full transition-all duration-500 ${step < tenderStep ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-slate-200'}`} />
+                          <div className={`w-4 h-1 mx-1 rounded-full transition-all duration-500 ${step < tenderStep ? 'bg-green-500' : 'bg-border'}`} />
                         )}
                       </div>
                     ))}
@@ -783,10 +827,10 @@ export default function ProjectsPage({
                   
                   {/* Percentage */}
                   <div className="text-right">
-                    <span className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    <span className="text-2xl font-black text-primary">
                       {Math.round((tenderStep/4)*100)}%
                     </span>
-                    <div className="text-xs text-slate-500 font-medium">complete</div>
+                    <div className="text-xs text-muted-foreground font-medium">complete</div>
                   </div>
                 </div>
               </div>
@@ -799,11 +843,11 @@ export default function ProjectsPage({
               <div className="flex-1 space-y-4">
                 {tenderStep === 1 && (
                     <div className="space-y-3">
-                      <div className="mb-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                        <h3 className="text-base font-bold text-slate-800 mb-1 flex items-center gap-2">
+                      <div className="mb-3 p-4 bg-card rounded-lg border border-border">
+                        <h3 className="text-lg font-bold text-foreground mb-1 flex items-center gap-2">
                           📋 Project Details
                         </h3>
-                        <p className="text-slate-600 text-xs">Essential project information (2x2 grid)</p>
+                        <p className="text-muted-foreground text-sm">Essential project information (2x2 grid)</p>
                       </div>
                       
                                             {/* Compact 2x2 Grid - Better Readability */}
@@ -811,8 +855,8 @@ export default function ProjectsPage({
                   <div className="grid grid-cols-2 gap-4">
                           {/* Row 1: Country & Project Name */}
                   <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
-                              🌍 Country <span className="text-red-500">*</span>
+                            <label className="text-base font-bold text-foreground flex items-center gap-1">
+                              🌍 Country <span className="text-destructive">*</span>
                             </label>
                             <div className="relative">
                               <Input
@@ -834,19 +878,19 @@ export default function ProjectsPage({
                                 onBlur={() => {
                                   setTimeout(() => setShowCountryDropdown(false), 200)
                                 }}
-                                className="h-10 w-full border border-slate-200 focus:border-blue-400 bg-white rounded-md shadow-sm text-sm"
+                                className="h-12 w-full text-base"
                                 placeholder="🔍 Search..."
                               />
                               
                               {/* Country Dropdown */}
                               {showCountryDropdown && !selectedCountry && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto z-50">
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto z-50">
                                   {filteredCountries.length > 0 ? (
                                     filteredCountries.map((country) => (
                                       <button
                                         key={country}
                                         type="button"
-                                        className="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors border-b border-slate-100 last:border-b-0 text-sm"
+                                        className="w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors border-b border-border/30 last:border-b-0 text-base"
                                         onClick={() => {
                                           setSelectedCountry(country)
                                           setProjectFormData({ ...projectFormData, country })
@@ -858,11 +902,11 @@ export default function ProjectsPage({
                                       </button>
                                     ))
                                   ) : countrySearch ? (
-                                    <div className="px-3 py-2 text-slate-500 text-sm">
+                                    <div className="px-3 py-2 text-muted-foreground text-base">
                                       No countries found
-                  </div>
+                                    </div>
                                   ) : (
-                                    <div className="px-3 py-2 text-slate-500 text-sm">
+                                    <div className="px-3 py-2 text-muted-foreground text-base">
                                       Type to search...
                                     </div>
                                   )}
@@ -878,7 +922,7 @@ export default function ProjectsPage({
                                       setProjectFormData({ ...projectFormData, country: "" })
                                       setCountrySearch("")
                                     }}
-                                    className="text-slate-400 hover:text-red-500 text-sm"
+                                    className="text-muted-foreground hover:text-destructive text-base"
                                   >
                                     ❌
                                   </button>
@@ -888,11 +932,11 @@ export default function ProjectsPage({
                   </div>
                           
                   <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
-                              📝 Project Name <span className="text-red-500">*</span>
+                            <label className="text-base font-bold text-foreground flex items-center gap-1">
+                              📝 Project Name <span className="text-destructive">*</span>
                             </label>
                             <Input 
-                              className="h-10 w-full border border-slate-200 focus:border-blue-400 bg-white rounded-md shadow-sm text-sm" 
+                              className="h-12 w-full text-base" 
                               value={projectFormData.name} 
                               onChange={(e) => setProjectFormData({ ...projectFormData, name: e.target.value })} 
                               placeholder="Project name" 
@@ -900,12 +944,12 @@ export default function ProjectsPage({
                   </div>
                           
                   <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
-                              📍 Project Location <span className="text-red-500">*</span>
+                            <label className="text-base font-bold text-foreground flex items-center gap-1">
+                              📍 Project Location <span className="text-destructive">*</span>
                             </label>
                             <div className="space-y-2">
                               <Input 
-                                className="h-10 w-full border border-slate-200 focus:border-blue-400 bg-white rounded-md shadow-sm text-sm" 
+                                className="h-12 w-full text-base" 
                                 value={projectFormData.location} 
                                 onChange={(e) => setProjectFormData({ ...projectFormData, location: e.target.value })} 
                                 placeholder="Enter address or location" 
@@ -913,7 +957,7 @@ export default function ProjectsPage({
                               <Button 
                                 type="button"
                                 variant="outline"
-                                className="h-8 px-3 text-xs border-blue-200 hover:border-blue-400 bg-blue-50 hover:bg-blue-100"
+                                className="h-10 px-4 text-sm"
                                 onClick={() => setShowMapPicker(true)}
                               >
                                 🗺️ Drop Pin on Map
@@ -928,11 +972,11 @@ export default function ProjectsPage({
                           
                           {/* Row 2: Start Date & End Date */}
                   <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                            <label className="text-base font-bold text-foreground flex items-center gap-1">
                               🗓️ Start Date
                             </label>
                             <Input 
-                              className="h-10 w-full border border-slate-200 focus:border-blue-400 bg-white rounded-md shadow-sm text-sm" 
+                              className="h-12 w-full text-base" 
                               type="date" 
                               value={projectFormData.startDate} 
                               onChange={(e) => setProjectFormData({ ...projectFormData, startDate: e.target.value })} 
@@ -940,11 +984,11 @@ export default function ProjectsPage({
                   </div>
                           
                   <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                            <label className="text-base font-bold text-foreground flex items-center gap-1">
                               🏁 End Date
                             </label>
                             <Input 
-                              className="h-10 w-full border border-slate-200 focus:border-blue-400 bg-white rounded-md shadow-sm text-sm" 
+                              className="h-12 w-full text-base" 
                               type="date" 
                               value={projectFormData.endDate} 
                               onChange={(e) => setProjectFormData({ ...projectFormData, endDate: e.target.value })} 
@@ -954,11 +998,11 @@ export default function ProjectsPage({
                         
                         {/* Description below the 2x2 grid */}
                         <div className="space-y-2 mt-4">
-                          <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                          <label className="text-base font-bold text-foreground flex items-center gap-1">
                             💭 Project Description
                           </label>
                           <Textarea 
-                            className="w-full border border-slate-200 focus:border-blue-400 bg-white rounded-md shadow-sm text-sm min-h-[70px]" 
+                            className="w-full min-h-[80px] text-base" 
                             value={projectFormData.description} 
                             onChange={(e) => setProjectFormData({ ...projectFormData, description: e.target.value })} 
                             placeholder="Brief project description..." 
@@ -970,39 +1014,39 @@ export default function ProjectsPage({
 
                 {tenderStep === 2 && (
                   <div className="space-y-4">
-                      <div className="mb-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-200">
-                        <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
+                      <div className="mb-4 p-4 bg-card rounded-xl border border-border">
+                        <h3 className="text-lg font-bold text-foreground mb-1 flex items-center gap-2">
                           💰 Scope & Budget
                         </h3>
-                        <p className="text-slate-600 text-sm">Define the project scope and financial details</p>
+                        <p className="text-muted-foreground text-sm">Define the project scope and financial details</p>
                       </div>
                       
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                            <label className="text-base font-bold text-foreground flex items-center gap-1">
                               📏 Project Size
                             </label>
-                            <select 
-                              value={projectFormData.size} 
-                              onChange={(e) => setProjectFormData({ ...projectFormData, size: e.target.value })}
-                              className="h-11 w-full border-2 border-slate-200 focus:border-emerald-400 bg-white rounded-lg shadow-sm hover:shadow-md transition-all px-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-opacity-50"
-                            >
-                              <option value="">🔽 Select project size</option>
-                              <option value="0-500">📐 Small (0–500 m²)</option>
-                              <option value="500-2000">🏢 Medium (500–2,000 m²)</option>
-                              <option value="2000-10000">🏗️ Large (2,000–10,000 m²)</option>
-                              <option value="10000-50000">🏭 Very Large (10,000–50,000 m²)</option>
-                              <option value=">50000">🌆 Mega Project (50,000+ m²)</option>
-                            </select>
+                            <Select value={projectFormData.size} onValueChange={(value) => setProjectFormData({ ...projectFormData, size: value })}>
+                              <SelectTrigger className="h-12 text-base">
+                                <SelectValue placeholder="🔽 Select project size" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="0-500">📐 Small (0–500 m²)</SelectItem>
+                                <SelectItem value="500-2000">🏢 Medium (500–2,000 m²)</SelectItem>
+                                <SelectItem value="2000-10000">🏗️ Large (2,000–10,000 m²)</SelectItem>
+                                <SelectItem value="10000-50000">🏭 Very Large (10,000–50,000 m²)</SelectItem>
+                                <SelectItem value=">50000">🌆 Mega Project (50,000+ m²)</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                           
                           <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                            <label className="text-base font-bold text-foreground flex items-center gap-1">
                               💷 Estimated Budget
                             </label>
                             <Input 
-                              className="h-11 border-2 border-slate-200 focus:border-emerald-400 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm hover:shadow-md transition-all" 
+                              className="h-12 text-base" 
                               value={projectFormData.budget} 
                               onChange={(e) => setProjectFormData({ ...projectFormData, budget: e.target.value })} 
                               placeholder="💰 e.g. £250,000" 
@@ -1011,11 +1055,11 @@ export default function ProjectsPage({
                         </div>
                         
                     <div className="space-y-2">
-                          <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                          <label className="text-base font-bold text-foreground flex items-center gap-1">
                             ⚡ Special Requirements
                           </label>
                           <Textarea 
-                            className="border-2 border-slate-200 focus:border-emerald-400 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm hover:shadow-md transition-all min-h-[100px]" 
+                            className="min-h-[120px] text-base" 
                             value={projectFormData.specialRequirements} 
                             onChange={(e) => setProjectFormData({ ...projectFormData, specialRequirements: e.target.value })} 
                             placeholder="📋 Any special requirements, compliance needs, or additional notes..." 
@@ -1027,25 +1071,25 @@ export default function ProjectsPage({
 
                   {tenderStep === 3 && (
                     <div className="space-y-4">
-                      <div className="mb-4 p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl border border-orange-200">
-                        <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
+                                            <div className="mb-4 p-4 bg-card rounded-xl border border-border">
+                        <h3 className="text-lg font-bold text-foreground mb-1 flex items-center gap-2">
                           ✅ Compliance Requirements
                         </h3>
-                        <p className="text-slate-600 text-sm">Specify compliance requirements for this project</p>
-                  </div>
+                        <p className="text-muted-foreground text-sm">Specify compliance requirements for this project</p>
+                      </div>
                       
                       <div className="space-y-4">
                         
                         <div className="space-y-3">
-                          <label className="text-sm font-bold text-slate-700 flex items-center gap-1">
+                          <label className="text-base font-bold text-foreground flex items-center gap-1">
                             ✅ Compliance Requirements
                           </label>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {['ISO 9001', 'NICEIC', 'CE Mark', 'CHAS'].map((req) => (
-                              <label key={req} className="flex items-center gap-3 p-3 border-2 border-slate-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 cursor-pointer transition-all">
+                              <label key={req} className="flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-accent cursor-pointer transition-all">
                                 <input 
                                   type="checkbox" 
-                                  className="w-5 h-5 text-orange-600 rounded focus:ring-orange-500" 
+                                  className="w-6 h-6 text-primary rounded focus:ring-primary" 
                                   checked={projectFormData.compliance.includes(req)} 
                                   onChange={(e) => {
                                     const checked = e.target.checked
@@ -1055,7 +1099,7 @@ export default function ProjectsPage({
                                     })
                                   }} 
                                 />
-                                <span className="text-sm font-semibold text-slate-700">{req}</span>
+                                <span className="text-base font-semibold text-foreground">{req}</span>
                               </label>
                             ))}
                           </div>
@@ -1066,44 +1110,44 @@ export default function ProjectsPage({
 
                   {tenderStep === 4 && (
                     <div className="space-y-4">
-                      <div className="mb-4 p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl border border-green-200">
-                        <h3 className="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
+                      <div className="mb-4 p-4 bg-card rounded-xl border border-border">
+                        <h3 className="text-lg font-bold text-foreground mb-1 flex items-center gap-2">
                           📝 Review & Submit
                         </h3>
-                        <p className="text-slate-600 text-sm">Review your tender details before submitting</p>
+                        <p className="text-muted-foreground text-sm">Review your tender details before submitting</p>
                       </div>
                       
                       <div className="space-y-4">
-                        <div className="bg-gradient-to-br from-white to-slate-50 border-2 border-slate-200 rounded-xl p-6 space-y-4 shadow-lg">
+                        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                 📝 Project Name
                               </span>
-                              <p className="text-lg font-bold text-slate-900">{projectFormData.name || 'Not specified'}</p>
+                              <p className="text-xl font-bold text-foreground">{projectFormData.name || 'Not specified'}</p>
                             </div>
                             <div>
-                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                 🌍 Country
                               </span>
-                              <p className="text-lg font-bold text-slate-900">{selectedCountry || projectFormData.country || 'Not specified'}</p>
+                              <p className="text-xl font-bold text-foreground">{selectedCountry || projectFormData.country || 'Not specified'}</p>
                             </div>
                           </div>
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                 📅 Timeline
                               </span>
-                              <p className="text-lg font-bold text-slate-900">
+                              <p className="text-xl font-bold text-foreground">
                                 {projectFormData.startDate || 'Not set'} → {projectFormData.endDate || 'Not set'}
                               </p>
                             </div>
                             <div>
-                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                 📏 Size & Budget
                               </span>
-                              <p className="text-lg font-bold text-slate-900">
+                              <p className="text-xl font-bold text-foreground">
                                 {projectFormData.size || 'Not specified'} • {projectFormData.budget || 'Not specified'}
                               </p>
                             </div>
@@ -1111,36 +1155,36 @@ export default function ProjectsPage({
                           
                           {projectFormData.description && (
                             <div>
-                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                 💭 Description
                               </span>
-                              <p className="text-slate-700 font-medium">{projectFormData.description}</p>
+                              <p className="text-base font-medium text-foreground">{projectFormData.description}</p>
                             </div>
                           )}
                           
                           {projectFormData.materials.length > 0 && (
                             <div>
-                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                                                            <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                 🔧 Materials
                               </span>
                               <div className="flex flex-wrap gap-2 mt-2">
                                 {projectFormData.materials.map((m, idx) => (
-                                  <span key={idx} className="px-3 py-2 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 rounded-full text-sm font-semibold border border-blue-300 shadow-sm">
+                                  <span key={idx} className="px-3 py-2 bg-primary/10 text-primary rounded-full text-sm font-semibold border border-primary/30">
                                     🔧 {m}
                                   </span>
                                 ))}
-                    </div>
-                  </div>
-                )}
+                              </div>
+                            </div>
+                          )}
 
                           {projectFormData.compliance.length > 0 && (
                             <div>
-                              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                 ✅ Compliance
                               </span>
                               <div className="flex flex-wrap gap-2 mt-2">
                                 {projectFormData.compliance.map((c, idx) => (
-                                  <span key={idx} className="px-3 py-2 bg-gradient-to-r from-green-100 to-green-200 text-green-800 rounded-full text-sm font-semibold border border-green-300 shadow-sm">
+                                  <span key={idx} className="px-3 py-2 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-sm font-semibold border border-green-500/30">
                                     ✅ {c}
                                   </span>
                                 ))}
@@ -1149,19 +1193,19 @@ export default function ProjectsPage({
                           )}
                         </div>
                         
-                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-6 shadow-lg">
+                        <div className="bg-card border border-border rounded-xl p-6">
                           <label className="flex items-start gap-3 cursor-pointer">
                             <input 
                               type="checkbox" 
-                              className="w-6 h-6 text-blue-600 mt-1 rounded focus:ring-blue-500" 
+                              className="w-6 h-6 text-primary mt-1 rounded focus:ring-primary" 
                               checked={createITTNow} 
                               onChange={(e) => setCreateITTNow(e.target.checked)} 
                             />
                             <div>
-                              <span className="text-lg font-bold text-blue-900 flex items-center gap-2">
+                              <span className="text-lg font-bold text-foreground flex items-center gap-2">
                                 🚀 Create ITT immediately
                               </span>
-                              <p className="text-blue-700 text-sm mt-1 font-medium">
+                              <p className="text-muted-foreground text-sm mt-1 font-medium">
                                 Automatically create and assign an Invitation to Tender for this project after submission
                               </p>
                             </div>
@@ -1175,14 +1219,14 @@ export default function ProjectsPage({
                                 {/* Right Side - Country Preview */}
                 <div className="w-96 flex-shrink-0">
                   <div className="sticky top-6">
-                    <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl border-2 border-blue-200 p-6 shadow-lg">
-                      <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <div className="bg-card rounded-xl border border-border p-6">
+                      <h4 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
                         🌍 Country Preview
-                        <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full animate-pulse"></div>
+                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                       </h4>
                       
-                                            {projectFormData.latitude && projectFormData.longitude ? (
-                        <div className="p-8 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border-2 border-blue-200">
+                      {projectFormData.latitude && projectFormData.longitude ? (
+                        <div className="p-8 bg-card rounded-xl border border-border">
                           <div className="space-y-4">
                             <div className="relative">
                               <iframe 
@@ -1199,47 +1243,47 @@ export default function ProjectsPage({
                               <div className="absolute top-3 right-3">
                                 <div className="bg-red-500 text-white text-sm px-3 py-1 rounded-full shadow-lg">
                                   📍
-                                </div>
-                              </div>
-                              <div className="absolute bottom-3 left-3">
-                                <a 
-                                  href={`https://www.openstreetmap.org/?mlat=${projectFormData.latitude}&mlon=${projectFormData.longitude}#map=14/${projectFormData.latitude}/${projectFormData.longitude}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-1 rounded shadow-sm transition-colors"
-                                >
-                                  View Full
-                                </a>
                               </div>
                             </div>
-                            
-                            <div className="text-sm text-green-600 font-mono bg-green-50 p-3 rounded border border-green-200 text-center">
+                            <div className="absolute bottom-3 left-3">
+                              <a 
+                                href={`https://www.openstreetmap.org/?mlat=${projectFormData.latitude}&mlon=${projectFormData.longitude}#map=14/${projectFormData.latitude}/${projectFormData.longitude}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                  className="bg-primary hover:opacity-90 text-primary-foreground text-sm px-3 py-1 rounded shadow-sm transition-colors"
+                              >
+                                View Full
+                              </a>
+                            </div>
+                          </div>
+                          
+                                                        <div className="text-sm text-green-500 font-mono bg-green-500/10 p-3 rounded border border-green-500/30 text-center">
                               Lat: {projectFormData.latitude} | Lng: {projectFormData.longitude}
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="h-80 bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border-2 border-dashed border-blue-300 flex items-center justify-center">
-                          <div className="text-center text-slate-500 p-6">
-                            <div className="text-6xl mb-4 animate-bounce">🌍</div>
-                            <h5 className="text-lg font-bold text-slate-700 mb-2">Select a Country</h5>
+                        <div className="h-80 bg-card rounded-xl border-2 border-dashed border-border flex items-center justify-center">
+                          <div className="text-center text-muted-foreground p-6">
+                            <div className="text-6xl mb-4">🌍</div>
+                            <h5 className="text-lg font-bold text-foreground mb-2">Select a Country</h5>
                             <p className="text-sm font-medium mb-2">Choose your project location</p>
-                            <p className="text-xs text-slate-400">🔍 Search from 195+ countries worldwide</p>
+                            <p className="text-xs text-muted-foreground">🔍 Search from 195+ countries worldwide</p>
                           </div>
                         </div>
                       )}
                     </div>
-                  </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
             {/* Bottom Actions */}
-            <div className="border-t-2 border-blue-100 pt-4 mt-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-b-lg">
+            <div className="border-t border-border pt-4 mt-4">
               <div className="flex items-center justify-between px-2">
                 <Button 
                   variant="outline" 
-                  className="h-12 px-6 border-2 border-slate-300 hover:border-blue-400 bg-white/80 backdrop-blur-sm shadow-md hover:shadow-lg transition-all" 
+                  className="h-14 px-8 text-base" 
                   onClick={() => {
                     const draft = {
                       currentStep: tenderStep as 1|2|3|4,
@@ -1257,7 +1301,7 @@ export default function ProjectsPage({
                   {tenderStep > 1 && (
                     <Button 
                       variant="outline" 
-                      className="h-12 px-6 border-2 border-slate-300 hover:border-blue-400 bg-white/80 backdrop-blur-sm shadow-md hover:shadow-lg transition-all" 
+                      className="h-14 px-8 text-base" 
                       onClick={() => setTenderStep((prev) => (prev - 1) as any)}
                     >
                       ← Back
@@ -1266,7 +1310,7 @@ export default function ProjectsPage({
                   
                   {tenderStep < 4 ? (
                     <Button 
-                      className="h-12 px-8 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105" 
+                      className="h-14 px-10 text-base" 
                       onClick={() => {
                         // Validation for step 1 - country is required
                         if (tenderStep === 1 && !selectedCountry) {
@@ -1280,7 +1324,7 @@ export default function ProjectsPage({
                     </Button>
                   ) : (
                     <Button 
-                      className="h-12 px-8 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl transition-all transform hover:scale-105" 
+                      className="h-14 px-10 text-base" 
                       onClick={handleCreateTender}
                     >
                       🚀 Create Tender
@@ -1295,10 +1339,10 @@ export default function ProjectsPage({
 
       {/* Pending Tenders (Drafts) */}
       {tenderDrafts.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6">
+        <div className="bg-background/80 backdrop-blur-md rounded-2xl shadow-sm border border-border p-6">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-neutral-800">Pending Tenders</h2>
-            <p className="text-sm text-neutral-500">Resume editing saved drafts</p>
+            <h2 className="text-lg font-semibold text-foreground">Pending Tenders</h2>
+            <p className="text-sm text-muted-foreground">Resume editing saved drafts</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {tenderDrafts.map((d) => (
@@ -1308,7 +1352,7 @@ export default function ProjectsPage({
                   <CardDescription className="text-sm">{d.selectedCountry || d.formData.country || '-'}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="text-xs text-neutral-500">Saved {new Date(d.savedAt).toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">Saved {new Date(d.savedAt).toLocaleString()}</div>
                   <div className="flex items-center gap-2">
                     <Button size="sm" variant="outline" onClick={() => {
                       setProjectFormData(d.formData)
@@ -1327,14 +1371,21 @@ export default function ProjectsPage({
 
              {/* New Projects Awaiting ITT Assignment */}
       {userProjects.length > 0 && (
-         <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6">
+         <div className="bg-background/80 backdrop-blur-md rounded-2xl shadow-sm border border-border p-6">
            <div className="mb-4">
-             <h2 className="text-lg font-semibold text-neutral-800">🚀 New Projects - ITT Assignment Required</h2>
-             <p className="text-sm text-neutral-500">Recently created projects that need ITT assignment</p>
+             <h2 className="text-lg font-semibold text-foreground">🚀 New Projects - ITT Assignment Required</h2>
+             <p className="text-sm text-muted-foreground">Recently created projects that need ITT assignment</p>
            </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {userProjects.map((p) => (
-               <Card key={p.id} className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
+               <Card 
+                 key={p.id} 
+                 className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500 cursor-pointer hover:bg-accent/5"
+                 onClick={() => {
+                   setSelectedProject(p)
+                   setShowProjectModal(true)
+                 }}
+               >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div>
@@ -1349,8 +1400,8 @@ export default function ProjectsPage({
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {p.description && <div className="text-sm text-neutral-600 line-clamp-3">{p.description}</div>}
-                <div className="flex items-center justify-between text-sm text-neutral-500">
+                {p.description && <div className="text-sm text-muted-foreground line-clamp-3">{p.description}</div>}
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <span>{p.startDate || '-'} → {p.endDate || '-'}</span>
                   <span>{p.sizeBucket || ''}</span>
                 </div>
@@ -1372,88 +1423,117 @@ export default function ProjectsPage({
       )}
 
       {/* Interactive World Map */}
-      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6">
+               <div className="bg-background/80 backdrop-blur-md rounded-2xl shadow-sm border border-border p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-semibold text-neutral-800 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
               🌍 Global Performance Heatmap
             </h2>
-            <p className="text-neutral-500 text-sm mt-1">Interactive world map showing regional project performance</p>
+            <p className="text-muted-foreground text-sm mt-1">Interactive world map showing regional project performance</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="h-9 px-3 rounded-lg border-neutral-200 hover:bg-neutral-100">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-9 px-3 rounded-lg border-border hover:bg-accent hover:text-accent-foreground"
+              onClick={() => setShowMap(!showMap)}
+            >
+              {showMap ? 'Hide Map' : 'Show Map'}
+            </Button>
+            <Button variant="outline" size="sm" className="h-9 px-3 rounded-lg border-border hover:bg-accent hover:text-accent-foreground">
               Clear Filter
             </Button>
           </div>
         </div>
         
-        {/* Working amCharts World Map from WorldMapPage */}
-        <WorldMapCanvas />
-        
-        {/* Compact Regional Stats Summary */}
-        <div className="mt-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-neutral-700">Regional Overview</h3>
-            <div className="flex items-center gap-2 text-xs text-neutral-500">
-              <span>{calculateRegionalStats().reduce((sum, region) => sum + region.activeProjects, 0)} total projects</span>
-              <span>•</span>
-              <span>{calculateRegionalStats().length} regions</span>
-            </div>
-          </div>
-          
-          {/* Compact Grid - Show top 8 regions by default */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-            {calculateRegionalStats()
-              .sort((a, b) => b.activeProjects - a.activeProjects)
-              .slice(0, 8)
-              .map((region) => (
-              <div key={region.region} className="bg-white rounded-lg border border-neutral-200 p-3 hover:shadow-sm transition-all duration-200 hover:border-neutral-300">
-                <div className="flex items-center justify-between mb-2">
-                  <div 
-                    className="w-2 h-2 rounded-full" 
-                    style={{ backgroundColor: region.color }}
-                  />
-                  <span className="text-xs font-medium text-neutral-700">{region.activeProjects}</span>
-                </div>
-                <div className="text-xs text-neutral-600 truncate" title={region.region}>
-                  {region.region}
-                </div>
-                {region.projectsOnTime && (
-                  <div className="text-xs text-green-600 mt-1">
-                    {region.projectsOnTime}% on time
+        {/* Working amCharts World Map from WorldMapPage with overlay */}
+        <div ref={mapFullscreenRef} className={`relative transition-all duration-300 ease-in-out ${showMap ? 'opacity-100 max-h-screen' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+          <WorldMapCanvas />
+          {/* Fullscreen button */}
+          <button
+            className="absolute top-3 right-3 bg-background/90 backdrop-blur px-3 py-1.5 rounded-md border border-border text-xs text-foreground hover:bg-accent hover:text-accent-foreground shadow-sm"
+            onClick={() => {
+              const el = mapFullscreenRef.current
+              if (!el) return
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {})
+              } else {
+                el.requestFullscreen?.().catch(() => {})
+              }
+            }}
+          >
+            Full Screen
+          </button>
+          {/* Regional Overview Overlay (bottom-right) */}
+          <div className="pointer-events-auto absolute bottom-4 right-4 w-64 max-w-full">
+            <div className="bg-background/80 backdrop-blur-md rounded-xl border border-border shadow-lg overflow-hidden">
+              <div className="px-2.5 py-1.5 border-b border-border flex items-center justify-between gap-2">
+                <div className="text-[11px] font-semibold text-foreground">Regional Overview</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-[10px] text-muted-foreground hidden sm:block">
+                    {calculateRegionalStats().reduce((sum, r) => sum + r.activeProjects, 0)} projects • {calculateRegionalStats().length} regions
                   </div>
-                )}
+                  <button
+                    onClick={() => setShowRegionOverlay(!showRegionOverlay)}
+                    className="text-[10px] px-2 py-0.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                    aria-label={showRegionOverlay ? 'Minimize' : 'Expand'}
+                  >
+                    {showRegionOverlay ? 'Hide' : 'Show'}
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
-          
-          {/* View All Button - Show if more than 8 regions */}
-          {calculateRegionalStats().length > 8 && (
-            <div className="mt-3 text-center">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="h-8 px-4 text-xs border-neutral-200 hover:bg-neutral-50"
-                onClick={() => setShowAllRegionsModal(true)}
-              >
-                View All {calculateRegionalStats().length} Regions
-              </Button>
+              {showRegionOverlay && (
+                <>
+                  <div className="max-h-48 overflow-auto">
+                    {calculateRegionalStats()
+                      .sort((a, b) => b.activeProjects - a.activeProjects)
+                      .map((region) => (
+                        <div key={region.region} className="px-2.5 py-1.5 text-[11px] flex items-center justify-between border-b last:border-b-0 border-border/30">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: region.color }} />
+                            <span className="text-foreground truncate" title={region.region}>{region.region}</span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {region.projectsOnTime && (
+                              <span className="text-green-500 tabular-nums">{region.projectsOnTime}%</span>
+                            )}
+                            <span className="text-foreground font-medium tabular-nums">{region.activeProjects}</span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                  {calculateRegionalStats().length > 8 && (
+                    <div className="px-2.5 py-1.5 bg-muted/30 flex items-center justify-center">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-7 px-3 text-[11px] border-border hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => setShowAllRegionsModal(true)}
+                      >
+                        View All
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          )}
+          </div>
         </div>
+        
+        {/* Compact Regional Stats Summary (moved into overlay above) */}
       </div>
 
       {/* Existing Projects In Progress */}
-      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6">
+               <div className="bg-background/80 backdrop-blur-md rounded-2xl shadow-sm border border-border p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-semibold text-neutral-800">📋 Projects In Progress</h2>
-            <p className="text-sm text-neutral-500">Current active projects across all regions</p>
+            <h2 className="text-lg font-semibold text-foreground">📋 Projects In Progress</h2>
+            <p className="text-sm text-muted-foreground">Current active projects across all regions</p>
           </div>
           <Button 
             variant="outline" 
             size="sm" 
-            className="h-9 px-3 rounded-lg border-neutral-200 hover:bg-neutral-100"
+            className="h-9 px-3 rounded-lg border-border hover:bg-accent hover:text-accent-foreground"
             onClick={() => window.open('https://google.com', '_blank')}
           >
             View All
@@ -1461,7 +1541,14 @@ export default function ProjectsPage({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {existingProjects.map((project) => (
-            <Card key={project.id} className="hover:shadow-md transition-shadow">
+            <Card 
+              key={project.id} 
+              className="hover:shadow-md transition-shadow cursor-pointer hover:bg-accent/5"
+              onClick={() => {
+                setSelectedProject(project)
+                setShowProjectModal(true)
+              }}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -1479,7 +1566,7 @@ export default function ProjectsPage({
                     }`}>
                       {project.score}/100
                     </div>
-                    <div className="text-xs text-neutral-500">Score</div>
+                    <div className="text-xs text-muted-foreground">Score</div>
                   </div>
                 </div>
               </CardHeader>
@@ -1497,7 +1584,7 @@ export default function ProjectsPage({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 bg-neutral-200 rounded-full overflow-hidden">
+                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
                         style={{ width: `${project.progress}%` }}
@@ -1509,19 +1596,19 @@ export default function ProjectsPage({
                 
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="flex items-center gap-1">
-                    <span className="text-neutral-500">👥</span>
+                    <span className="text-muted-foreground">👥</span>
                     <span>{project.team}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-neutral-500">🏢</span>
+                    <span className="text-muted-foreground">🏢</span>
                     <span>{project.suppliers}</span>
                   </div>
                 </div>
                 
                 <div className="flex items-center justify-between pt-2 border-t">
-                  <span className="text-xs text-neutral-500">Due: {project.endDate}</span>
+                  <span className="text-xs text-muted-foreground">Due: {project.endDate}</span>
                   <div className="flex items-center gap-1">
-                    <span className="text-xs text-neutral-500">Budget:</span>
+                    <span className="text-xs text-muted-foreground">Budget:</span>
                     <span className="text-xs font-medium">{project.budget}</span>
                   </div>
                 </div>
@@ -1562,43 +1649,43 @@ export default function ProjectsPage({
                 )
                 .sort((a, b) => b.activeProjects - a.activeProjects)
                 .map((region) => (
-                <div key={region.region} className="bg-white rounded-lg border border-neutral-200 p-4 hover:shadow-md transition-all duration-200 hover:border-neutral-300">
+                <div key={region.region} className="bg-background rounded-lg border border-border p-4 hover:shadow-md transition-all duration-200 hover:border-border">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <div 
                         className="w-3 h-3 rounded-full shadow-sm" 
                         style={{ backgroundColor: region.color }}
                       />
-                      <span className="font-semibold text-sm text-neutral-800">{region.region}</span>
+                      <span className="font-semibold text-sm text-foreground">{region.region}</span>
                     </div>
-                    <div className="text-xs bg-neutral-100 text-neutral-600 px-2 py-1 rounded-full">
+                    <div className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full">
                       {region.activeProjects}
                     </div>
                   </div>
                   
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-neutral-500">Active Projects</span>
-                      <span className="font-medium text-neutral-700">{region.activeProjects}</span>
+                      <span className="text-muted-foreground">Active Projects</span>
+                      <span className="font-medium text-foreground">{region.activeProjects}</span>
                     </div>
                     
                     {region.totalProjects && region.totalProjects > region.activeProjects && (
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-neutral-500">Total Projects</span>
-                        <span className="font-medium text-neutral-700">{region.totalProjects}</span>
+                        <span className="text-muted-foreground">Total Projects</span>
+                        <span className="font-medium text-foreground">{region.totalProjects}</span>
                       </div>
                     )}
                     
                     {region.projectsOnTime && (
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-neutral-500">On Time</span>
+                        <span className="text-muted-foreground">On Time</span>
                         <span className="font-medium text-green-600">{region.projectsOnTime}%</span>
                       </div>
                     )}
                     
                     {region.budgetUsage && (
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-neutral-500">Budget Usage</span>
+                        <span className="text-muted-foreground">Budget Usage</span>
                         <span className="font-medium text-blue-600">{region.budgetUsage}%</span>
                       </div>
                     )}
@@ -1607,12 +1694,12 @@ export default function ProjectsPage({
                   {region.performance && (
                     <div className="mt-3 pt-2 border-t border-neutral-100">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-neutral-500">Performance</span>
+                        <span className="text-xs text-muted-foreground">Performance</span>
                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                           region.performance === 'Excellent' ? 'bg-green-100 text-green-700' :
                           region.performance === 'Great' ? 'bg-blue-100 text-blue-700' :
                           region.performance === 'Good' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-neutral-100 text-neutral-700'
+                          'bg-muted text-foreground'
                         }`}>
                           {region.performance}
                         </span>
@@ -1670,7 +1757,7 @@ export default function ProjectsPage({
                 />
               </div>
               
-              <div className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-lg border">
+              <div className="absolute top-4 right-4 bg-background p-3 rounded-lg shadow-lg border">
                 <div className="text-sm font-medium text-gray-700 mb-2">📍 Selected Location</div>
                 <div className="text-xs text-gray-500">
                   Click on the map to set coordinates
@@ -1709,6 +1796,422 @@ export default function ProjectsPage({
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Project Detail Modal */}
+      <Dialog open={showProjectModal} onOpenChange={setShowProjectModal}>
+        <DialogContent className="w-[99.5vw] h-[96vh] max-w-none !max-w-none bg-background/95 backdrop-blur-md border border-border" style={{ width: '99.5vw', maxWidth: 'none' }}>
+          <DialogHeader className="border-b border-border pb-4">
+            <DialogTitle className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
+              {selectedProject?.image || '🏗️'} {selectedProject?.name || 'Project Details'}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-base md:text-lg">
+              Comprehensive project information and management
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedProject && (
+            <div className="flex-1 overflow-hidden">
+              {/* Top 3 Sections: DETAILS, ITT, SUPPLY CHAIN */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 h-1/2 mb-4 lg:mb-6">
+                
+                {/* DETAILS Section */}
+                <div className="bg-card rounded-xl border border-border p-4 lg:p-6 overflow-y-auto">
+                  <h3 className="text-lg lg:text-xl font-bold text-foreground mb-4 lg:mb-6 flex items-center gap-2 border-b border-border pb-3">
+                    📋 DETAILS
+                  </h3>
+                  <div className="space-y-4 lg:space-y-6">
+                    {/* Project Overview */}
+                    <div className="space-y-3 lg:space-y-4">
+                      <h4 className="text-base lg:text-lg font-semibold text-foreground">Project Overview</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Location</span>
+                          <span className="text-sm font-semibold text-foreground">🌍 {selectedProject.location || selectedProject.country}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Status</span>
+                          <span className={`text-sm font-semibold px-2 py-1 rounded-full ${
+                            selectedProject.status === 'On Track' ? 'bg-green-100 text-green-700' :
+                            selectedProject.status === 'Ahead' ? 'bg-blue-100 text-blue-700' :
+                            selectedProject.status === 'Delayed' ? 'bg-red-100 text-red-700' :
+                            'bg-muted text-foreground'
+                          }`}>
+                            {selectedProject.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Progress</span>
+                          <span className="text-sm font-semibold text-foreground">{selectedProject.progress || 0}%</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Score</span>
+                          <span className={`text-sm font-semibold ${
+                            (selectedProject.score || 0) >= 90 ? 'text-green-600' : 
+                            (selectedProject.score || 0) >= 80 ? 'text-blue-600' : 
+                            (selectedProject.score || 0) >= 70 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {selectedProject.score || 0}/100
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Financial Details */}
+                    <div className="space-y-3 lg:space-y-4">
+                      <h4 className="text-base lg:text-lg font-semibold text-foreground">Financial Details</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Budget</span>
+                          <span className="text-sm font-semibold text-foreground">{selectedProject.budget}</span>
+                        </div>
+                        {selectedProject.spent && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-muted-foreground">Spent</span>
+                            <span className="text-sm font-semibold text-foreground">{selectedProject.spent}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Size</span>
+                          <span className="text-sm font-semibold text-foreground">{selectedProject.size || selectedProject.sizeBucket}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Team & Suppliers */}
+                    <div className="space-y-3 lg:space-y-4">
+                      <h4 className="text-base lg:text-lg font-semibold text-foreground">Team & Suppliers</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Team Size</span>
+                          <span className="text-sm font-semibold text-foreground">
+                            {Array.isArray(selectedProject.team) ? selectedProject.team.length : selectedProject.team}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Suppliers</span>
+                          <span className="text-sm font-semibold text-foreground">{selectedProject.suppliers || 0}</span>
+                        </div>
+                        {selectedProject.issuesReported && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-muted-foreground">Issues Reported</span>
+                            <span className="text-sm font-semibold text-foreground">{selectedProject.issuesReported}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold text-foreground">Progress Overview</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-foreground">Project Progress</span>
+                          <span className="text-sm font-semibold text-foreground">{selectedProject.progress || 0}%</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
+                            style={{ width: `${selectedProject.progress || 0}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ITT Section */}
+                <div className="bg-card rounded-xl border border-border p-4 lg:p-6 overflow-y-auto">
+                  <h3 className="text-lg lg:text-xl font-bold text-foreground mb-4 lg:mb-6 flex items-center gap-2 border-b border-border pb-3">
+                    📄 ITT
+                  </h3>
+                  <div className="space-y-6">
+                    <div className="text-center py-8">
+                      <div className="text-4xl mb-4">📋</div>
+                      <h4 className="text-lg font-semibold text-foreground mb-2">Invitation to Tender</h4>
+                      <p className="text-muted-foreground text-sm mb-4">Manage tender documents and supplier responses</p>
+                      <Button 
+                        className="w-full"
+                        onClick={() => {
+                          setIttFormData && setIttFormData((prev: any) => ({ 
+                            ...prev, 
+                            project: selectedProject.name, 
+                            region: (selectedProject.country || '').toLowerCase() 
+                          }))
+                          setActiveTab && setActiveTab('itt-manager')
+                          setShowCreateITT && setShowCreateITT(true)
+                          setShowProjectModal(false)
+                        }}
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Create New ITT
+                      </Button>
+                    </div>
+                    
+                    {/* Sample ITT Data */}
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold text-foreground">Recent ITTs</h4>
+                      <div className="space-y-3">
+                        <div className="bg-muted/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold text-foreground">General Construction</span>
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Active</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Deadline: {selectedProject.endDate || '2024-12-31'} • 5 responses
+                          </div>
+                        </div>
+                        <div className="bg-muted/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold text-foreground">Electrical Systems</span>
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Draft</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Created: 2024-11-15 • 0 responses
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SUPPLY CHAIN Section */}
+                <div className="bg-card rounded-xl border border-border p-4 lg:p-6 overflow-y-auto">
+                  <h3 className="text-lg lg:text-xl font-bold text-foreground mb-4 lg:mb-6 flex items-center gap-2 border-b border-border pb-3">
+                    🔗 SUPPLY CHAIN
+                  </h3>
+                  <div className="space-y-6">
+                    <div className="text-center py-8">
+                      <div className="text-4xl mb-4">🏭</div>
+                      <h4 className="text-lg font-semibold text-foreground mb-2">Supply Chain Management</h4>
+                      <p className="text-muted-foreground text-sm mb-4">Track suppliers, materials, and logistics</p>
+                      <Button 
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          setActiveTab && setActiveTab('supply-chain')
+                          setShowProjectModal(false)
+                        }}
+                      >
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        View Supply Chain
+                      </Button>
+                    </div>
+                    
+                    {/* Sample Supply Chain Data */}
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold text-foreground">Key Suppliers</h4>
+                      <div className="space-y-3">
+                        <div className="bg-muted/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold text-foreground">ABC Construction Ltd</span>
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Approved</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Materials: Concrete, Steel • Rating: 4.8/5
+                          </div>
+                        </div>
+                        <div className="bg-muted/50 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold text-foreground">XYZ Electrical</span>
+                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Pending</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Services: Electrical Installation • Rating: 4.2/5
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Materials Overview */}
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold text-foreground">Materials Status</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-foreground">Concrete</span>
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Delivered</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-foreground">Steel Beams</span>
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">In Transit</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-foreground">Electrical Equipment</span>
+                          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Ordered</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Section: TIMELINE */}
+              <div className="bg-card rounded-xl border border-border p-4 lg:p-6 h-1/2 overflow-y-auto">
+                <h3 className="text-lg lg:text-xl font-bold text-foreground mb-4 lg:mb-6 flex items-center gap-2 border-b border-border pb-3">
+                  📅 TIMELINE
+                </h3>
+                <div className="space-y-6">
+                  {/* Project Timeline */}
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-foreground">Project Timeline</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-3 h-3 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-semibold text-foreground">Project Initiation</span>
+                            <span className="text-xs text-muted-foreground">{selectedProject.startDate || '2024-01-15'}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Project planning and team assembly completed</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start gap-4">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-semibold text-foreground">Foundation Work</span>
+                            <span className="text-xs text-muted-foreground">2024-02-01</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Site preparation and foundation construction</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start gap-4">
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-semibold text-foreground">Structural Work</span>
+                            <span className="text-xs text-muted-foreground">2024-03-15</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Main structural elements and framework</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start gap-4">
+                        <div className="w-3 h-3 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-semibold text-foreground">Interior Finishing</span>
+                            <span className="text-xs text-muted-foreground">2024-05-01</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Interior systems and finishing work</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-start gap-4">
+                        <div className="w-3 h-3 bg-gray-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-semibold text-foreground">Project Completion</span>
+                            <span className="text-xs text-muted-foreground">{selectedProject.endDate || selectedProject.deadline || '2024-12-31'}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Final inspection and handover</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Key Milestones */}
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-foreground">Key Milestones</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <div className="text-sm font-semibold text-foreground mb-1">Planning Phase</div>
+                        <div className="text-xs text-muted-foreground">Completed: {selectedProject.startDate || '2024-01-15'}</div>
+                        <div className="w-full bg-muted rounded-full h-2 mt-2">
+                          <div className="bg-green-500 h-2 rounded-full" style={{ width: '100%' }}></div>
+                        </div>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <div className="text-sm font-semibold text-foreground mb-1">Construction Phase</div>
+                        <div className="text-xs text-muted-foreground">Progress: {selectedProject.progress || 0}%</div>
+                        <div className="w-full bg-muted rounded-full h-2 mt-2">
+                          <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${selectedProject.progress || 0}%` }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recent Activities */}
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-foreground">Recent Activities</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-foreground">Site inspection completed</span>
+                        <span className="text-muted-foreground text-xs">2 hours ago</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-foreground">Material delivery scheduled</span>
+                        <span className="text-muted-foreground text-xs">1 day ago</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                        <span className="text-foreground">Safety review meeting</span>
+                        <span className="text-muted-foreground text-xs">3 days ago</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-4 mt-6 border-t border-border">
+                <div className="flex items-center gap-3">
+                  <Button 
+                    variant="outline" 
+                    className="h-12 px-8"
+                    onClick={() => {
+                      setIttFormData && setIttFormData((prev: any) => ({ 
+                        ...prev, 
+                        project: selectedProject.name, 
+                        region: (selectedProject.country || '').toLowerCase() 
+                      }))
+                      setActiveTab && setActiveTab('itt-manager')
+                      setShowCreateITT && setShowCreateITT(true)
+                      setShowProjectModal(false)
+                    }}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Create ITT
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="h-12 px-8"
+                    onClick={() => {
+                      setActiveTab && setActiveTab('supply-chain')
+                      setShowProjectModal(false)
+                    }}
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Supply Chain
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="h-12 px-8"
+                    onClick={() => {
+                      setComparisonProjects(prev => [...prev, selectedProject])
+                      setShowProjectModal(false)
+                    }}
+                  >
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Compare
+                  </Button>
+                </div>
+                
+                <Button 
+                  variant="outline" 
+                  className="h-12 px-8"
+                  onClick={() => setShowProjectModal(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

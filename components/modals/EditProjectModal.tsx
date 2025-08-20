@@ -181,14 +181,14 @@ export default function EditProjectModal({ isOpen, onClose, project, onSave }: E
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="w-[95vw] h-[95vh] max-w-none bg-gradient-to-br from-slate-50 to-blue-50 border-0 shadow-2xl"
+        className="w-[95vw] h-[95vh] max-w-none bg-background/80 backdrop-blur-md border border-border shadow-2xl"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
         style={{ width: '95vw', height: '95vh', maxWidth: 'none' }}
       >
-        <DialogHeader className="pb-4 border-b border-slate-200">
-          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
-            <Building className="w-7 h-7 text-blue-600" />
+        <DialogHeader className="pb-4 border-b border-border bg-card/50 rounded-t-lg">
+          <DialogTitle className="text-2xl font-bold text-foreground flex items-center gap-3">
+            <Building className="w-7 h-7 text-primary" />
             Edit Project: {project.name}
           </DialogTitle>
         </DialogHeader>

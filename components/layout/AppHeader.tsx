@@ -7,6 +7,7 @@ import { projects } from "../../lib/constants"
 import { SidebarTrigger } from "../ui/sidebar"
 import { useDashboardStore } from "../../components/pages/DashboardPage"
 import { useState } from "react"
+import ThemeToggle from "../ui/theme-toggle"
 
 interface AppHeaderProps {
   screenSize: 'mobile' | 'tablet' | 'desktop'
@@ -17,14 +18,14 @@ export default function AppHeader({ screenSize }: AppHeaderProps) {
   const [projectFilter, setProjectFilter] = useState("All Projects")
   
   return (
-    <header className="border-b border-border bg-white/80 backdrop-blur-md px-6 py-4 shadow-sm shrink-0 relative z-20">
+    <header className="border-b border-border bg-background/80 backdrop-blur-md px-6 py-4 shadow-sm shrink-0 relative z-20">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           <SidebarTrigger className="h-11 w-11 rounded-xl hover:bg-accent transition-colors">
             <PanelLeft className="h-5 w-5" />
           </SidebarTrigger>
           <Select value={projectFilter} onValueChange={setProjectFilter}>
-            <SelectTrigger className="w-48 h-11 border-border bg-white shadow-sm hover:shadow-md transition-shadow">
+            <SelectTrigger className="w-48 h-11 border-border bg-card shadow-sm hover:shadow-md transition-shadow">
               <SelectValue placeholder="All Projects" />
             </SelectTrigger>
             <SelectContent>
@@ -38,14 +39,15 @@ export default function AppHeader({ screenSize }: AppHeaderProps) {
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input 
                 placeholder="Search projects, suppliers..." 
-                className="pl-12 w-72 h-11 border-border bg-white shadow-sm hover:shadow-md transition-shadow focus:shadow-lg" 
+                className="pl-12 w-72 h-11 border-border bg-card shadow-sm hover:shadow-md transition-shadow focus:shadow-lg" 
               />
             </div>
           )}
         </div>
         <div className="flex items-center gap-4">
+          <ThemeToggle />
           <Select value={`${range} view`} onValueChange={(v) => setRange((v.split(" ")[0] as any) || "Monthly")}>
-            <SelectTrigger className="w-48 h-11 border-border bg-white shadow-sm hover:shadow-md transition-shadow">
+            <SelectTrigger className="w-48 h-11 border-border bg-card shadow-sm hover:shadow-md transition-shadow">
               <SelectValue placeholder="Monthly view" />
             </SelectTrigger>
             <SelectContent>

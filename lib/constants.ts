@@ -1,4 +1,4 @@
-import { Project, RegionData, MonthlyData, SupplierData, ITTDeadline, ActiveITT, Insight, Widget } from './types'
+import { Project, RegionData, MonthlyData, SupplierData, ITTDeadline, ActiveITT, Insight, Widget, WorkPackage } from './types'
 
 export const projects: Project[] = [
   { 
@@ -390,3 +390,100 @@ export const allWidgets: Widget[] = [
 ]
 
 export const WIDGET_ITEM_TYPE = 'widget'
+
+// Optional: seed array for Work Packages (initially empty; can be filled by importer)
+export const workPackages: WorkPackage[] = []
+
+// Fixed ITT Categories for selection
+export const ittCategories: string[] = [
+  'Electrical',
+  'Structural',
+  'HVAC',
+  'Plumbing',
+  'General',
+  'Interior',
+  'Technology',
+]
+
+// Work Package Name master list for selection
+export const workPackageNames: string[] = [
+  'Demolition',
+  'Earthworks',
+  'Temporary Drainage',
+  'Dewatering',
+  'Archaeological attendance/UXO',
+  'CFA & Others',
+  'Precast/CFA & Others',
+  'Precast Only',
+  'PreCast',
+  'Rigid inclusions/Vibro stonecolumns',
+  'Helical Displacement inclusion/Vibro stonecolumns',
+  'Rigid Inclusions',
+  'Vibro stonecolumns',
+  'Structural Steel Frame & Metal Deck',
+  'Dock / Retaining Wall / Stairs',
+  'Dock / Retaining Wall / Stairs / Lift Shafts / Frame',
+  'Dock / Retaining Wall / Stairs / Lift Shafts',
+  'Dock / Retaining Wall / Stairs / Lift Shafts / Slab / Frame',
+  'Dock / Retaining Wall / Stairs / Lift Shafts / Slabs',
+  'Slabs',
+  'Frames',
+  'Precast Stairs',
+  'Retaining Structures',
+  'Block Paving',
+  'Groundworker/below ground drainage',
+  'Ekki Blocks',
+  'Surface/Foul water pumps',
+  'Pre-Cast Manholes and Tanks',
+  'Interceptors',
+  'Attenuation Tanks/Vortex Separators',
+  'Attenuation Tanks',
+  'Utilities Orders/Section 278',
+  'Intumescent Paint & Firestopping',
+  'Fencing, Acoustic Fencing & Gates',
+  'Security Gates, Barriers and Bollards',
+  'Acoustic Fencing',
+  'Refrigeration',
+  'Gatehouse & Guard/Security Huts',
+  'External Façade; Roofing & Cladding',
+  'External Façade; Roofing & Cladding/MOY Approved Contractor / Brick Slips',
+  'External Façade; Roofing & Cladding/MOY Approved Contractor',
+  'Roofing Only /MOY Approved Contractor',
+  'Siphonic Roof Drainage',
+  'Photovoltaic Panels',
+  'Louvres',
+  'Steel Stairs; Ladders, Balustrades & Gantries',
+  'Curtain Walling & Glazing',
+  'Dock Levellers',
+  'Fire Suppression / Sprinklers',
+  'Lightning Protection',
+  'Mechanical & Electrical',
+  'Concrete Yards & Insitu Concrete Structures',
+  'Solar Shading & Blinds',
+  'Personnel Doors (External)',
+  'Rapid Rollers/ Roller Shutters',
+  'Personnel Lifts',
+  'Goods Lifts/ Dumb Waiter',
+  'Internal Floor Slabs & Upper Floor Slabs',
+  'Internal Floor Slabs',
+  'Upper Concrete Floor Slabs',
+  'Screeding/External Resin fisnish',
+  'Asphalt',
+  'Green Wall Feature',
+  'Floor Finishes; Resin Floors',
+  'Turnstiles',
+  'Coldroom/Whitewall/Firewall',
+  'Partitions/ Ceilings & Wall Finishes/ Vanity Units & Kitchenettes',
+  'IPS Panelling System',
+  'Raised Access Floor',
+  'Floor Finishes; Ceramic, Carpet & Vinyl',
+  'Blockwork',
+  'Protection; Barriers, Handrails & Caging',
+  'Stainless Steel Kerbs & Bollards',
+  'External Shelters; Smoking/Cycle/Motorcycle',
+  'Landscaping',
+  'Line Painting & Demarcations',
+  'Signage Internal & External',
+  'Bird Protection & Prevention',
+  'Mastic Sealant; Yards, Slabs & Walls'
+]

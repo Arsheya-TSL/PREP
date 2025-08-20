@@ -1,5 +1,6 @@
-import { PageType, WidgetSize, ITTFormData, ProjectFormData, ActiveITT, Widget } from './types'
-import { projects } from './constants'
+import { PageType, WidgetSize, ITTFormData, ProjectFormData, ActiveITT, Widget, WorkPackage } from './types'
+import { projects, workPackages } from './constants'
+import { parseSimpleCSV } from './utils'
 import { defaultITTFormData, defaultProjectFormData } from './defaultFormData'
 
 export const createAppHandlers = (
@@ -250,4 +251,28 @@ ${projectData.specialRequirements ? `Special Requirements: ${projectData.special
     handleCreateITT,
     handleCreateProject
   }
+}
+
+// Simple in-memory importer for Work Packages from raw CSV text
+export function importWorkPackagesFromCSV(csvText: string): { imported: number; replaced: number } {
+  const rows = parseSimpleCSV(csvText)
+  let imported = 0
+  let replaced = 0
+  rows.forEach(r => {
+    const coinsCode = r['coins code'] || r['coinscode'] || r['coins_code'] || r['coins'] || ''
+    const description = r['description'] || ''
+    const idStr = r['id'] || ''
+    if (!coinsCode || !description) return
+    const idNum = Number(idStr) || Math.floor(Math.random()*1e9)
+    const wp: WorkPackage = { coinsCode, description, id: idNum }
+    const idx = workPackages.findIndex(x => x.coinsCode.toLowerCase() === coinsCode.toLowerCase())
+    if (idx >= 0) {
+      workPackages[idx] = { ...workPackages[idx], ...wp }
+      replaced++
+    } else {
+      workPackages.push(wp)
+      imported++
+    }
+  })
+  return { imported, replaced }
 }

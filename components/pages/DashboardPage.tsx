@@ -31,6 +31,8 @@ import { monthlyData } from "../../lib/constants"
 import TypeToCreateWidgetModal from "../modals/TypeToCreateWidgetModal"
 import EditProjectModal from "../modals/EditProjectModal"
 import { PrimaryButton, GhostButton } from "../ui/shared-components"
+import { Card, CardContent } from "../ui/card"
+import { Switch } from "../ui/switch"
 
 // -----------------------------
 // Types
@@ -158,6 +160,13 @@ const DEFAULT_WIDGETS: WidgetConfig[] = [
   { id: "pending-itts", title: "Pending ITTs", area: "itt", size: "md", enabled: false, order: 10 },
   { id: "satisfaction-trend", title: "Satisfaction Trend", area: "insights", size: "lg", enabled: false, order: 11 },
   { id: "performance-analytics", title: "Performance Analytics", area: "analytics", size: "xl", enabled: false, order: 12 },
+  // New defaults
+  { id: "regional-breakdown", title: "Regional Project Breakdown", area: "analytics", size: "lg", enabled: false, order: 13 },
+  { id: "risk-heatmap", title: "Risk Heatmap", area: "analytics", size: "lg", enabled: false, order: 14 },
+  { id: "cashflow-trend", title: "Cashflow Trend", area: "financial", size: "xl", enabled: false, order: 15 },
+  { id: "top-issues", title: "Top Issues", area: "insights", size: "md", enabled: false, order: 16 },
+  { id: "resource-utilisation", title: "Resource Utilisation", area: "analytics", size: "lg", enabled: false, order: 17 },
+  { id: "pipeline-forecast", title: "Pipeline Forecast", area: "projects", size: "xl", enabled: false, order: 18 },
 ]
 
 // -----------------------------
@@ -195,7 +204,10 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   range: "Monthly",
   setRange: (r) => {
     set({ range: r })
-    persist()
+    // Only persist on client side
+    if (typeof window !== 'undefined') {
+      persist()
+    }
   },
   editMode: false,
   setEditMode: (v) => set({ editMode: v }),
@@ -203,10 +215,16 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   setWidgets: (updater) => {
     const next = updater(get().widgets)
     set({ widgets: next, hasUnsavedChanges: true })
+    // Auto-persist widget layout so it survives navigation and reloads
+    if (typeof window !== 'undefined') {
+      try { persist() } catch {}
+    }
   },
   saveWidgets: () => {
     console.log('💾 Save widgets called, current widgets:', get().widgets)
-    persist()
+    if (typeof window !== 'undefined') {
+      persist()
+    }
     set({ hasUnsavedChanges: false, originalWidgets: get().widgets })
     console.log('✅ Save widgets completed')
   },
@@ -334,7 +352,7 @@ function Dropdown({ value, options, onChange, ariaLabel, className = "" }: {
       <button
         aria-label={ariaLabel}
         onClick={() => setOpen((s) => !s)}
-        className="flex items-center justify-between w-full px-3 py-2 text-sm bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+        className="flex items-center justify-between w-full px-3 py-2 text-sm bg-background border border-border rounded-lg hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       >
         <span className="text-neutral-800 truncate">{value}</span>
         <span className="text-neutral-400 ml-2">▼</span>
@@ -348,7 +366,7 @@ function Dropdown({ value, options, onChange, ariaLabel, className = "" }: {
                 onChange(opt)
                 setOpen(false)
               }}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-neutral-100 focus-visible:bg-neutral-100"
+              className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent"
             >
               {opt}
             </button>
@@ -365,19 +383,7 @@ function Toggle({ checked, onChange, ariaLabel }: {
   ariaLabel: string
 }) {
   return (
-    <button
-      aria-label={ariaLabel}
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 ${
-        checked ? "bg-neutral-800" : "bg-neutral-200"
-      }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          checked ? "translate-x-6" : "translate-x-1"
-        }`}
-      />
-    </button>
+    <Switch checked={checked} onCheckedChange={onChange} aria-label={ariaLabel} />
   )
 }
 
@@ -442,12 +448,12 @@ function EditToolbar() {
   if (!editMode) return null
 
   return (
-    <div className="sticky top-0 z-40 bg-white border-b border-neutral-200 px-6 py-3 shadow-sm">
+    <div className="sticky top-0 z-40 bg-background/80 border-b border-border px-6 py-3 shadow-sm backdrop-blur-md">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-neutral-800">Editing Dashboard</h2>
+          <h2 className="text-lg font-semibold text-foreground">Editing Dashboard</h2>
           {hasUnsavedChanges && (
-            <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+            <span className="text-xs bg-accent text-accent-foreground px-2 py-1 rounded-full">
               Unsaved changes
             </span>
           )}
@@ -536,13 +542,13 @@ function EditSidePanel({
   if (!editMode) return null
 
   return (
-    <div className="fixed right-0 top-0 h-full w-[420px] bg-white shadow-xl border-l border-neutral-200 z-40 overflow-hidden">
+    <div className="fixed right-0 top-0 h-full w-[420px] bg-background/80 backdrop-blur-md shadow-xl border-l border-border z-40 overflow-hidden">
       {/* Header */}
-      <div className="p-6 border-b border-neutral-200">
+      <div className="p-6 border-b border-border">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-neutral-800">Dashboard Widgets</h2>
-            <p className="text-sm text-neutral-500 mt-1">Toggle, size, and reorder.</p>
+            <h2 className="text-xl font-semibold text-foreground">Dashboard Widgets</h2>
+            <p className="text-sm text-muted-foreground mt-1">Toggle, size, and reorder.</p>
           </div>
           <div className="flex items-center gap-2">
             <PrimaryButton
@@ -571,7 +577,7 @@ function EditSidePanel({
       </div>
 
       {/* Search and Bulk Actions */}
-      <div className="p-6 border-b border-neutral-200 bg-neutral-50">
+      <div className="p-6 border-b border-border bg-card/50">
         <div className="flex items-center gap-4 mb-4">
           <div className="flex-1 relative">
             <input
@@ -579,31 +585,31 @@ function EditSidePanel({
               placeholder="Search widgets..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-neutral-200 rounded-lg focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="w-full pl-10 pr-4 py-2 text-sm bg-card border border-border rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none shadow-sm hover:shadow-md transition-shadow"
             />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">🔍</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">🔍</span>
           </div>
         </div>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-neutral-600">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>{enabledCount} of {totalCount} enabled</span>
             <button
               onClick={() => toggleAll(true)}
-              className="px-3 py-1 text-xs bg-white border border-neutral-200 rounded hover:bg-neutral-100"
+              className="px-3 py-1 text-xs bg-card border border-border rounded hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md transition-shadow"
             >
               Enable All
             </button>
             <button
               onClick={() => toggleAll(false)}
-              className="px-3 py-1 text-xs bg-white border border-neutral-200 rounded hover:bg-neutral-100"
+              className="px-3 py-1 text-xs bg-card border border-border rounded hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md transition-shadow"
             >
               Disable All
             </button>
           </div>
-          <button
-            onClick={resetToDefaults}
-            className="text-sm text-neutral-600 hover:text-neutral-800 underline"
-          >
+                      <button
+              onClick={resetToDefaults}
+              className="text-sm text-muted-foreground hover:text-foreground underline"
+            >
             Reset to defaults
           </button>
         </div>
@@ -615,7 +621,7 @@ function EditSidePanel({
           {filteredWidgets.map((widget) => (
             <div
               key={widget.id}
-              className="flex items-center justify-between p-4 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"
+              className="flex items-center justify-between p-4 bg-card border border-border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors shadow-sm hover:shadow-md"
             >
               <div className="flex items-center space-x-4">
                 <Toggle
@@ -624,9 +630,9 @@ function EditSidePanel({
                   ariaLabel={`toggle-${widget.id}`}
                 />
                 <div>
-                  <div className="text-sm font-medium text-neutral-800">{widget.title}</div>
+                  <div className="text-sm font-medium text-foreground">{widget.title}</div>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs bg-neutral-100 text-neutral-600 rounded-full px-2 py-0.5">
+                    <span className="text-xs bg-muted text-muted-foreground rounded-full px-2 py-0.5">
                       {widget.area}
                     </span>
                   </div>
@@ -634,7 +640,7 @@ function EditSidePanel({
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-neutral-500">Size:</span>
+                  <span className="text-xs text-muted-foreground">Size:</span>
                   <Dropdown
                     value={widget.size.toUpperCase()}
                     options={["SM", "MD", "LG", "XL"]}
@@ -646,14 +652,14 @@ function EditSidePanel({
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => moveWidget(widget.id, -1)}
-                    className="p-1 text-neutral-400 hover:text-neutral-600"
+                    className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded"
                     aria-label="Move up"
                   >
                     ↑
                   </button>
                   <button
                     onClick={() => moveWidget(widget.id, 1)}
-                    className="p-1 text-neutral-400 hover:text-neutral-600"
+                    className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded"
                     aria-label="Move down"
                   >
                     ↓
@@ -699,9 +705,11 @@ export function SortableWidgetCard({ widget, children }: { widget: WidgetConfig;
 
   if (!editMode) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6">
-        {children}
-      </div>
+      <Card className="rounded-xl glass-card glow-on-hover border border-border/5">
+        <CardContent className="p-6">
+          {children}
+        </CardContent>
+      </Card>
     )
   }
 
@@ -711,28 +719,28 @@ export function SortableWidgetCard({ widget, children }: { widget: WidgetConfig;
       style={style}
       className={`relative transition-all duration-200 ease-out ${isDragging ? "opacity-50 scale-95 z-50" : ""}`}
     >
-      <div 
-        className="bg-white rounded-2xl shadow-sm border border-neutral-200 p-6 h-full relative"
-        {...attributes}
-        {...listeners}
-      >
+              <Card 
+          className="rounded-2xl h-full relative glass-card glow-on-hover border border-border/5"
+          {...attributes}
+          {...listeners}
+        >
         {/* Drag Handle */}
         <div
-          className="absolute top-3 left-3 w-8 h-8 bg-blue-100 hover:bg-blue-200 rounded-lg cursor-grab active:cursor-grabbing flex items-center justify-center text-blue-600 text-sm font-bold z-10 transition-all duration-150 hover:scale-110 shadow-sm border border-blue-200"
+          className="absolute top-3 left-3 w-8 h-8 bg-accent hover:bg-accent/80 rounded-lg cursor-grab active:cursor-grabbing flex items-center justify-center text-accent-foreground text-sm font-bold z-10 transition-all duration-150 hover:scale-110 shadow-sm border border-border"
           title="Drag to reorder"
           onClick={(e) => e.stopPropagation()}
         >
           ⋮⋮
         </div>
         {/* Order Indicator */}
-        <div className="absolute top-3 right-3 w-5 h-5 bg-neutral-100 rounded-full flex items-center justify-center text-xs text-neutral-600 font-medium">
+        <div className="absolute top-3 right-3 w-5 h-5 bg-muted rounded-full flex items-center justify-center text-xs text-muted-foreground font-medium">
           {widgets.findIndex(w => w.id === widget.id) + 1}
         </div>
         {/* Content with proper spacing for edit mode */}
-        <div className={editMode ? "pt-8" : ""}>
+        <CardContent className={editMode ? "pt-8 p-6" : "p-6"}>
           {children}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -773,26 +781,26 @@ function TotalProjects({ size, data }: { size: WidgetSize; data: ReturnType<type
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-sm font-semibold text-neutral-600">Total Live Tenders</h3>
-          {!compact && <p className="text-xs text-neutral-500">Active ITTs across all projects</p>}
+          <h3 className="text-sm font-semibold text-foreground">Total Live Tenders</h3>
+          {!compact && <p className="text-xs text-muted-foreground">Active ITTs across all projects</p>}
         </div>
         <span className="text-2xl">📄</span>
       </div>
       <div className="mb-4">
-        <div className={`${countClass} font-bold text-neutral-800`}>
+        <div className={`${countClass} font-bold text-foreground`}>
           {compact ? formatNumberCompact(totalTenders) : totalTenders}
         </div>
-        {!compact && <div className="flex items-center text-sm text-green-600 mt-1">↗ +{activeTenders} active this month</div>}
+        {!compact && <div className="flex items-center text-sm text-foreground mt-1">↗ +{activeTenders} active this month</div>}
       </div>
       {!compact && (
         <div className="space-y-3">
           {/* Yearly Progress */}
           <div>
-            <div className="flex justify-between text-xs text-neutral-500 mb-1">
+            <div className="flex justify-between text-xs text-muted-foreground mb-1">
               <span>Yearly Progress</span>
               <span>{yearlyProgress}%</span>
             </div>
-            <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
               <div 
                 className="h-full bg-gradient-to-r from-blue-500 to-blue-600" 
                 style={{ width: `${Math.min(yearlyProgress, 100)}%` }} 
@@ -802,18 +810,18 @@ function TotalProjects({ size, data }: { size: WidgetSize; data: ReturnType<type
           
           {/* Top Countries */}
           <div className="space-y-1">
-            <div className="text-xs text-neutral-500 mb-2">Top Regions</div>
+            <div className="text-xs text-muted-foreground mb-2">Top Regions</div>
             {topCountries.map(({ country, count }) => (
               <div key={country} className="flex items-center justify-between">
-                <span className="text-xs font-medium text-neutral-800">{country}</span>
+                <span className="text-xs font-medium text-foreground">{country}</span>
                 <div className="flex items-center gap-2 flex-1 mx-2">
-                  <div className="flex-1 h-1 bg-neutral-100 rounded-full overflow-hidden">
+                  <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full" 
                       style={{ width: `${(count / totalTenders) * 100}%` }}
                     />
                   </div>
-                  <span className="text-xs text-neutral-500 w-4">{count}</span>
+                  <span className="text-xs text-muted-foreground w-4">{count}</span>
                 </div>
               </div>
             ))}
@@ -843,8 +851,8 @@ function ActiveProjects({ size, data, onEditClick }: { size: WidgetSize; data: R
     <div className={compact ? "pt-6" : ""}>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-sm font-semibold text-neutral-600">Active Projects</h3>
-          {!compact && <p className="text-xs text-neutral-500">Timeline progress vs planned</p>}
+          <h3 className="text-sm font-semibold text-foreground">Active Projects</h3>
+          {!compact && <p className="text-xs text-muted-foreground">Timeline progress vs planned</p>}
         </div>
         <span className="text-2xl">📅</span>
       </div>
@@ -853,11 +861,11 @@ function ActiveProjects({ size, data, onEditClick }: { size: WidgetSize; data: R
           const timelineProgress = calculateTimelineProgress(p)
           const isOnTrack = p.progress >= timelineProgress - 10 // 10% tolerance
           return (
-            <div key={p.name} className="p-3 hover:bg-neutral-50 rounded-lg border border-neutral-100 cursor-pointer group">
+            <div key={p.name} className="p-3 hover:bg-accent rounded-lg border border-border cursor-pointer group">
               <div className="flex items-center justify-between mb-2">
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-neutral-800 truncate">{p.name}</div>
-                  {!compact && <div className="text-xs text-neutral-500">{p.location}</div>}
+                  <div className="text-sm font-medium text-foreground truncate">{p.name}</div>
+                  {!compact && <div className="text-xs text-muted-foreground">{p.location}</div>}
                 </div>
                 <span
                   className={`ml-4 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -874,11 +882,11 @@ function ActiveProjects({ size, data, onEditClick }: { size: WidgetSize; data: R
                 <div className="space-y-2">
                   {/* Project Progress */}
                   <div>
-                    <div className="flex justify-between text-xs text-neutral-500 mb-1">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
                       <span>Project Progress</span>
                       <span>{p.progress}%</span>
                     </div>
-                    <div className="w-full h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500" 
                         style={{ width: `${p.progress}%` }} 
@@ -888,11 +896,11 @@ function ActiveProjects({ size, data, onEditClick }: { size: WidgetSize; data: R
                   
                   {/* Timeline Progress */}
                   <div>
-                    <div className="flex justify-between text-xs text-neutral-500 mb-1">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
                       <span>Time Elapsed</span>
                       <span>{timelineProgress}%</span>
                     </div>
-                    <div className="w-full h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                       <div 
                         className={`h-full rounded-full transition-all duration-500 ${
                           isOnTrack 
@@ -907,7 +915,7 @@ function ActiveProjects({ size, data, onEditClick }: { size: WidgetSize; data: R
               )}
               
               {compact && (
-                <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
                   <div 
                     className={`h-full rounded-full ${
                       isOnTrack
@@ -923,10 +931,10 @@ function ActiveProjects({ size, data, onEditClick }: { size: WidgetSize; data: R
         })}
       </div>
       {!compact && (
-        <div className="mt-4 pt-3 border-t border-neutral-100">
+        <div className="mt-4 pt-3 border-t border-border">
           <button 
             onClick={() => onEditClick?.(items[0])} // Open modal with first project for demo
-            className="w-full px-3 py-2 text-xs text-neutral-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg border border-neutral-200 hover:border-blue-200 transition-all duration-200 font-medium"
+            className="w-full px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg border border-border hover:border-border transition-all duration-200 font-medium"
           >
             📝 Edit Project Timelines
           </button>
@@ -983,9 +991,9 @@ function BudgetVsSpend({ size }: { size: WidgetSize }) {
         <div className="flex items-center gap-2">
           {!compact && (
             <div className="flex items-center gap-1 text-xs">
-              <button onClick={() => setViz('area')} className={`px-2 py-1 rounded border ${viz==='area'?'bg-neutral-900 text-white border-neutral-900':'border-neutral-200 hover:bg-neutral-100'}`}>Area</button>
-              <button onClick={() => setViz('line')} className={`px-2 py-1 rounded border ${viz==='line'?'bg-neutral-900 text-white border-neutral-900':'border-neutral-200 hover:bg-neutral-100'}`}>Line</button>
-              <button onClick={() => setViz('bar')} className={`px-2 py-1 rounded border ${viz==='bar'?'bg-neutral-900 text-white border-neutral-900':'border-neutral-200 hover:bg-neutral-100'}`}>Bar</button>
+              <button onClick={() => setViz('area')} className={`px-2 py-1 rounded border ${viz==='area'?'bg-primary text-primary-foreground border-primary':'border-border hover:bg-accent hover:text-accent-foreground'}`}>Area</button>
+<button onClick={() => setViz('line')} className={`px-2 py-1 rounded border ${viz==='line'?'bg-primary text-primary-foreground border-primary':'border-border hover:bg-accent hover:text-accent-foreground'}`}>Line</button>
+<button onClick={() => setViz('bar')} className={`px-2 py-1 rounded border ${viz==='bar'?'bg-primary text-primary-foreground border-primary':'border-border hover:bg-accent hover:text-accent-foreground'}`}>Bar</button>
             </div>
           )}
           <span className="text-2xl">💰</span>
@@ -994,11 +1002,11 @@ function BudgetVsSpend({ size }: { size: WidgetSize }) {
 
       {compact ? (
         <div className="text-center">
-          <div className="text-2xl font-bold text-neutral-800">94%</div>
-          <div className="text-xs text-green-600">↗ +2.1%</div>
+                      <div className="text-2xl font-bold text-foreground">94%</div>
+          <div className="text-xs text-foreground">↗ +2.1%</div>
         </div>
       ) : (
-        <div className="h-32 md:h-40 bg-neutral-50 rounded-lg border border-neutral-200 flex items-center justify-center">
+        <div className="h-32 md:h-40 bg-muted/30 rounded-lg border border-border/8 flex items-center justify-center">
           <div className="w-full h-full px-4">
             <ResponsiveContainer width="100%" height="100%">
               {viz === 'area' ? (
@@ -1064,7 +1072,7 @@ function Deadlines({ size, data }: { size: WidgetSize; data: ReturnType<typeof a
       </div>
       <div className="space-y-3">
         {items.map((d, i) => (
-          <div key={i} className="flex items-center justify-between p-3 hover:bg-neutral-50 rounded-lg">
+          <div key={i} className="flex items-center justify-between p-3 hover:bg-accent/50 rounded-lg">
             <div>
               <div className="text-sm font-medium text-neutral-800">
                 {compact ? d.title.split(" ")[0] : d.title}
@@ -1093,9 +1101,9 @@ function SupplierRankings({ size, data }: { size: WidgetSize; data: ReturnType<t
         </div>
         <span className="text-2xl">🏅</span>
       </div>
-      <div className="divide-y divide-neutral-200 border border-neutral-200 rounded-xl overflow-hidden">
+      <div className="divide-y divide-border/30 border border-border/20 rounded-xl overflow-hidden">
         {rows.map((s) => (
-          <div key={s.name} className="flex items-center justify-between p-3 hover:bg-neutral-50">
+          <div key={s.name} className="flex items-center justify-between p-3 hover:bg-accent/50">
             <div className="min-w-0">
               <div className="text-sm font-medium text-neutral-800 truncate">{s.name}</div>
               {!compact && <div className="text-xs text-neutral-500 truncate">{s.reason}</div>}
@@ -1132,11 +1140,11 @@ function CompletionRate({ size, data }: { size: WidgetSize; data: ReturnType<typ
       </div>
       {compact ? (
         <div className="text-center">
-          <div className="text-2xl font-bold text-neutral-800">{value}%</div>
-          <div className="text-xs text-green-600">↗ +3%</div>
+                      <div className="text-2xl font-bold text-foreground">{value}%</div>
+          <div className="text-xs text-foreground">↗ +3%</div>
         </div>
       ) : (
-        <div className="h-28 bg-neutral-50 rounded-lg border border-neutral-200 flex items-center justify-center">
+        <div className="h-28 bg-muted/30 rounded-lg border border-border/20 flex items-center justify-center">
           <div className="w-full h-full px-4">
             <ResponsiveContainer width="100%" height="100%">
               {viz === 'bar' ? (
@@ -1207,7 +1215,7 @@ function QuickInsights({ size, data }: { size: WidgetSize; data: ReturnType<type
       </div>
       <div className="space-y-3">
         {items.map((i) => (
-          <div key={i.title} className="flex items-center justify-between p-3 hover:bg-neutral-50 rounded-lg">
+          <div key={i.title} className="flex items-center justify-between p-3 hover:bg-accent/50 rounded-lg">
             <div>
               <div className="text-sm font-medium text-neutral-800">{compact ? i.title.split(" ")[0] : i.title}</div>
               {!compact && <div className="text-xs text-neutral-500">{i.trend}</div>}
@@ -1240,7 +1248,7 @@ function PendingITTs({ size, data }: { size: WidgetSize; data: ReturnType<typeof
       </div>
       <div className="space-y-3">
         {items.map((d, i) => (
-          <div key={i} className="flex items-center justify-between p-3 hover:bg-neutral-50 rounded-lg">
+          <div key={i} className="flex items-center justify-between p-3 hover:bg-accent/50 rounded-lg">
             <div className="min-w-0">
               <div className="text-sm font-medium text-neutral-800 truncate">
                 {compact ? d.title.split(" ")[0] : d.title}
@@ -1270,7 +1278,7 @@ function SatisfactionTrend({ size, data }: { size: WidgetSize; data: ReturnType<
         <span className="text-2xl">📈</span>
       </div>
       {xl ? (
-        <div className="h-32 bg-neutral-50 rounded-lg border border-neutral-200 flex items-center justify-center">
+        <div className="h-32 bg-muted/30 rounded-lg border border-border/20 flex items-center justify-center">
           <div className="w-full px-6">
             <div className="h-2 rounded-full bg-gradient-to-r from-green-400 to-green-600 mb-3" />
             <div className="flex justify-between text-xs text-neutral-600">
@@ -1284,15 +1292,15 @@ function SatisfactionTrend({ size, data }: { size: WidgetSize; data: ReturnType<
           </div>
         </div>
       ) : compact ? (
-        <div className="text-center">
-          <div className="text-2xl font-bold text-neutral-800">{latest.score}%</div>
-          <div className="text-xs text-green-600">↗ +2%</div>
-        </div>
+                  <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{latest.score}%</div>
+            <div className="text-xs text-foreground">↗ +2%</div>
+          </div>
       ) : (
-        <div className="text-center">
-          <div className="text-2xl font-bold text-neutral-800">{latest.score}%</div>
-          <div className="text-xs text-green-600">↗ +2% this month</div>
-        </div>
+                  <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{latest.score}%</div>
+            <div className="text-xs text-foreground">↗ +2% this month</div>
+          </div>
       )}
     </div>
   )
@@ -1327,14 +1335,14 @@ function PerformanceAnalytics({ size, data }: { size: WidgetSize; data: ReturnTy
               <div className="text-xs text-neutral-500">Risk Score</div>
             </div>
           </div>
-          <div className="h-24 bg-neutral-50 rounded-lg border border-neutral-200 flex items-center justify-center">
+          <div className="h-24 bg-muted/30 rounded-lg border border-border/20 flex items-center justify-center">
             <div className="text-sm text-neutral-500">Advanced Analytics Chart</div>
           </div>
         </div>
       ) : compact ? (
         <div className="text-center">
-          <div className="text-2xl font-bold text-neutral-800">{data.kpis.onTime}%</div>
-          <div className="text-xs text-green-600">On-Time Delivery</div>
+                      <div className="text-2xl font-bold text-foreground">{data.kpis.onTime}%</div>
+          <div className="text-xs text-foreground">On-Time Delivery</div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -1598,7 +1606,7 @@ function DashboardGrid({ widgets, data, onEditProject }: { widgets: WidgetConfig
                 style={{ gridColumn: `span ${colSpan}` }}
                 className={`
                   transition-all duration-200
-                  ${isDragOver ? 'ring-2 ring-blue-500 ring-opacity-50 bg-blue-50' : ''}
+                  ${isDragOver ? 'ring-2 ring-ring/50 bg-accent' : ''}
                   ${isActive ? 'opacity-50' : ''}
                 `}
               >
@@ -1614,7 +1622,7 @@ function DashboardGrid({ widgets, data, onEditProject }: { widgets: WidgetConfig
       
       <DragOverlay>
         {activeId && activeWidget ? (
-          <div className="bg-white rounded-2xl shadow-xl border border-neutral-200 p-6 opacity-90 scale-105 transform rotate-1">
+          <div className="bg-background rounded-2xl shadow-xl border border-border/5 p-6 opacity-90 scale-105 transform rotate-1">
             <RenderWidget widget={activeWidget} data={data} />
           </div>
         ) : null}
@@ -1650,15 +1658,18 @@ export default function DashboardPage() {
   const [showEditProject, setShowEditProject] = useState(false)
   const [selectedProject, setSelectedProject] = useState<any>(null)
 
-  // Client-side initialization
+  // Client-side initialization with immediate hydration from localStorage
   useEffect(() => {
     setIsClient(true)
-    const persisted = loadPersisted()
-    if (persisted) {
-      if (persisted.range) setRange(persisted.range)
-      if (persisted.widgets) setWidgets(() => persisted.widgets)
+    // Only load persisted data on the client side
+    if (typeof window !== 'undefined') {
+      const persisted = loadPersisted()
+      if (persisted) {
+        if (persisted.range) setRange(persisted.range)
+        if (persisted.widgets) setWidgets(() => persisted.widgets)
+      }
     }
-  }, [])
+  }, [setRange, setWidgets])
 
 
 
@@ -1675,8 +1686,8 @@ export default function DashboardPage() {
   // Don't render until client-side initialization is complete
   if (!isClient) {
     return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <div className="text-neutral-600">Loading...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
       </div>
     )
   }
@@ -1688,14 +1699,14 @@ export default function DashboardPage() {
 
       {/* Page header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-neutral-800">Dashboard</h1>
-        <p className="text-neutral-500 mt-1">Welcome back, John. Here's your project overview.</p>
+        <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground mt-1">Welcome back, John. Here's your project overview.</p>
         {editMode && (
-          <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-800 mb-2">
+          <div className="mt-4 p-4 bg-accent rounded-lg border border-border">
+            <p className="text-sm text-foreground mb-2">
               <strong>Edit Mode Active:</strong> Drag widgets using the blue handle (⋮⋮) to reorder them, or use the side panel controls.
             </p>
-            <div className="text-xs text-blue-600">
+            <div className="text-xs text-muted-foreground">
               <strong>Tip:</strong> Use the "Save" button to persist your changes, or "Save & Close" to exit edit mode.
             </div>
           </div>
