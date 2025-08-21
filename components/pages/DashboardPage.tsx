@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
-import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, LineChart, Line, BarChart, Bar } from 'recharts'
+import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar } from 'recharts'
 import { create } from "zustand"
 import {
   DndContext,
@@ -25,7 +25,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Plus } from "lucide-react"
+import { Plus, MoreHorizontal } from "lucide-react"
 import WidgetChooserModal from "../modals/WidgetChooserModal"
 import { monthlyData } from "../../lib/constants"
 import TypeToCreateWidgetModal from "../modals/TypeToCreateWidgetModal"
@@ -33,6 +33,8 @@ import EditProjectModal from "../modals/EditProjectModal"
 import { PrimaryButton, GhostButton } from "../ui/shared-components"
 import { Card, CardContent } from "../ui/card"
 import { Switch } from "../ui/switch"
+import { Button } from "../ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu"
 
 // -----------------------------
 // Types
@@ -705,7 +707,7 @@ export function SortableWidgetCard({ widget, children }: { widget: WidgetConfig;
 
   if (!editMode) {
     return (
-      <Card className="rounded-xl glass-card glow-on-hover border border-border/5">
+      <Card className="bg-card border border-border rounded-xl">
         <CardContent className="p-6">
           {children}
         </CardContent>
@@ -720,7 +722,7 @@ export function SortableWidgetCard({ widget, children }: { widget: WidgetConfig;
       className={`relative transition-all duration-200 ease-out ${isDragging ? "opacity-50 scale-95 z-50" : ""}`}
     >
               <Card 
-          className="rounded-2xl h-full relative glass-card glow-on-hover border border-border/5"
+          className="bg-card border border-border rounded-2xl h-full relative"
           {...attributes}
           {...listeners}
         >
@@ -979,7 +981,8 @@ function KPIs({ size, data }: { size: WidgetSize; data: ReturnType<typeof aggreg
 function BudgetVsSpend({ size }: { size: WidgetSize }) {
   const xl = size === "xl"
   const compact = size === "sm"
-  const [viz, setViz] = useState<'area' | 'line' | 'bar'>('area')
+  const [viz, setViz] = useState<'area' | 'line' | 'bar' | 'pie' | 'radar' | 'radial'>('area')
+  const [showDropdown, setShowDropdown] = useState(false)
 
   return (
     <div className={compact ? "pt-6" : ""}>
@@ -990,10 +993,57 @@ function BudgetVsSpend({ size }: { size: WidgetSize }) {
         </div>
         <div className="flex items-center gap-2">
           {!compact && (
-            <div className="flex items-center gap-1 text-xs">
-              <button onClick={() => setViz('area')} className={`px-2 py-1 rounded border ${viz==='area'?'bg-primary text-primary-foreground border-primary':'border-border hover:bg-accent hover:text-accent-foreground'}`}>Area</button>
-<button onClick={() => setViz('line')} className={`px-2 py-1 rounded border ${viz==='line'?'bg-primary text-primary-foreground border-primary':'border-border hover:bg-accent hover:text-accent-foreground'}`}>Line</button>
-<button onClick={() => setViz('bar')} className={`px-2 py-1 rounded border ${viz==='bar'?'bg-primary text-primary-foreground border-primary':'border-border hover:bg-accent hover:text-accent-foreground'}`}>Bar</button>
+            <div className="relative">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 w-8 p-0"
+                onClick={() => setShowDropdown(!showDropdown)}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+              {showDropdown && (
+                <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-md shadow-lg z-50">
+                  <div className="py-1">
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('area'); setShowDropdown(false); }}
+                    >
+                      Area Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('line'); setShowDropdown(false); }}
+                    >
+                      Line Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('bar'); setShowDropdown(false); }}
+                    >
+                      Bar Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('pie'); setShowDropdown(false); }}
+                    >
+                      Pie Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('radar'); setShowDropdown(false); }}
+                    >
+                      Radar Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('radial'); setShowDropdown(false); }}
+                    >
+                      Radial Chart
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <span className="text-2xl">💰</span>
@@ -1013,39 +1063,69 @@ function BudgetVsSpend({ size }: { size: WidgetSize }) {
                 <AreaChart data={monthlyData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="budgetG" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={1}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.3}/>
                     </linearGradient>
                     <linearGradient id="spentG" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={1}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.3}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="month" stroke="#64748b" fontSize={10} />
-                  <YAxis stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:8, fontSize:12 }} />
-                  <Area type="monotone" dataKey="budget" stroke="#3b82f6" fill="url(#budgetG)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="spent" stroke="#10b981" fill="url(#spentG)" strokeWidth={2} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                  <Area type="monotone" dataKey="budget" stroke="#3b82f6" fill="url(#budgetG)" strokeWidth={2} fillOpacity={1} stackId="1" />
+                  <Area type="monotone" dataKey="spent" stroke="#10b981" fill="url(#spentG)" strokeWidth={2} fillOpacity={1} stackId="1" />
                 </AreaChart>
               ) : viz === 'line' ? (
                 <LineChart data={monthlyData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="month" stroke="#64748b" fontSize={10} />
-                  <YAxis stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:8, fontSize:12 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
                   <Line type="monotone" dataKey="budget" stroke="#3b82f6" strokeWidth={2} dot={false} />
                   <Line type="monotone" dataKey="spent" stroke="#10b981" strokeWidth={2} dot={false} />
                 </LineChart>
-              ) : (
+              ) : viz === 'bar' ? (
                 <BarChart data={monthlyData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="month" stroke="#64748b" fontSize={10} />
-                  <YAxis stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:8, fontSize:12 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
                   <Bar dataKey="budget" fill="#3b82f6" radius={[4,4,0,0]} />
                   <Bar dataKey="spent" fill="#10b981" radius={[4,4,0,0]} />
                 </BarChart>
+              ) : viz === 'pie' ? (
+                <PieChart>
+                  <Pie
+                    data={monthlyData.slice(0, 6)}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={60}
+                    dataKey="budget"
+                    nameKey="month"
+                  >
+                    {monthlyData.slice(0, 6).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={index % 2 === 0 ? "#3b82f6" : "#10b981"} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                </PieChart>
+              ) : viz === 'radar' ? (
+                <RadarChart data={monthlyData.slice(0, 6)}>
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+                  <PolarRadiusAxis stroke="hsl(var(--border))" />
+                  <Radar name="Budget" dataKey="budget" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                  <Radar name="Spent" dataKey="spent" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                </RadarChart>
+              ) : (
+                <RadialBarChart data={monthlyData.slice(0, 6)} cx="50%" cy="50%" innerRadius="20%" outerRadius="80%">
+                  <RadialBar dataKey="budget" background={{ fill: '#eee', radius: 5 }} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                </RadialBarChart>
               )}
             </ResponsiveContainer>
           </div>
@@ -1119,7 +1199,8 @@ function SupplierRankings({ size, data }: { size: WidgetSize; data: ReturnType<t
 function CompletionRate({ size, data }: { size: WidgetSize; data: ReturnType<typeof aggregate> }) {
   const compact = size === "sm"
   const value = data.kpis.completion
-  const [viz, setViz] = useState<'bar' | 'line'>('bar')
+  const [viz, setViz] = useState<'area' | 'line' | 'bar' | 'pie' | 'radar' | 'radial'>('bar')
+  const [showDropdown, setShowDropdown] = useState(false)
   
   return (
     <div className={compact ? "pt-6" : ""}>
@@ -1130,9 +1211,57 @@ function CompletionRate({ size, data }: { size: WidgetSize; data: ReturnType<typ
         </div>
         <div className="flex items-center gap-2">
           {!compact && (
-            <div className="flex items-center gap-1 text-xs">
-              <button onClick={() => setViz('bar')} className={`px-2 py-1 rounded border ${viz==='bar'?'bg-neutral-900 text-white border-neutral-900':'border-neutral-200 hover:bg-neutral-100'}`}>Bar</button>
-              <button onClick={() => setViz('line')} className={`px-2 py-1 rounded border ${viz==='line'?'bg-neutral-900 text-white border-neutral-900':'border-neutral-200 hover:bg-neutral-100'}`}>Line</button>
+            <div className="relative">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 w-8 p-0"
+                onClick={() => setShowDropdown(!showDropdown)}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+              {showDropdown && (
+                <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-md shadow-lg z-50">
+                  <div className="py-1">
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('area'); setShowDropdown(false); }}
+                    >
+                      Area Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('line'); setShowDropdown(false); }}
+                    >
+                      Line Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('bar'); setShowDropdown(false); }}
+                    >
+                      Bar Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('pie'); setShowDropdown(false); }}
+                    >
+                      Pie Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('radar'); setShowDropdown(false); }}
+                    >
+                      Radar Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('radial'); setShowDropdown(false); }}
+                    >
+                      Radial Chart
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <span className="text-2xl">✅</span>
@@ -1147,22 +1276,64 @@ function CompletionRate({ size, data }: { size: WidgetSize; data: ReturnType<typ
         <div className="h-28 bg-muted/30 rounded-lg border border-border/20 flex items-center justify-center">
           <div className="w-full h-full px-4">
             <ResponsiveContainer width="100%" height="100%">
-              {viz === 'bar' ? (
-                <BarChart data={[{ label: 'Completion', value }]}> 
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              {viz === 'area' ? (
+                <AreaChart data={[{ label: 'Completion', value }]}>
+                  <defs>
+                    <linearGradient id="completionG" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={1}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="label" hide />
                   <YAxis domain={[0, 100]} hide />
-                  <Tooltip contentStyle={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:8, fontSize:12 }} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                  <Area type="monotone" dataKey="value" stroke="#3b82f6" fill="url(#completionG)" strokeWidth={2} fillOpacity={1} />
+                </AreaChart>
+              ) : viz === 'bar' ? (
+                <BarChart data={[{ label: 'Completion', value }]}> 
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="label" hide />
+                  <YAxis domain={[0, 100]} hide />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
                   <Bar dataKey="value" fill="#3b82f6" radius={[4,4,0,0]} />
                 </BarChart>
-              ) : (
+              ) : viz === 'line' ? (
                 <LineChart data={[{ label: 'Now', value: value-3 }, { label: 'Current', value }]}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="label" hide />
                   <YAxis domain={[0, 100]} hide />
-                  <Tooltip contentStyle={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:8, fontSize:12 }} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
                   <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot />
                 </LineChart>
+              ) : viz === 'pie' ? (
+                <PieChart>
+                  <Pie
+                    data={[{ name: 'Completed', value }, { name: 'Remaining', value: 100 - value }]}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={40}
+                    dataKey="value"
+                    nameKey="name"
+                  >
+                    <Cell fill="#3b82f6" />
+                    <Cell fill="#e5e7eb" />
+                  </Pie>
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                </PieChart>
+              ) : viz === 'radar' ? (
+                <RadarChart data={[{ metric: 'Completion', value }]}>
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="metric" stroke="hsl(var(--muted-foreground))" />
+                  <PolarRadiusAxis stroke="hsl(var(--border))" />
+                  <Radar name="Completion" dataKey="value" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                </RadarChart>
+              ) : (
+                <RadialBarChart data={[{ name: 'Completion', value }]} cx="50%" cy="50%" innerRadius="20%" outerRadius="80%">
+                  <RadialBar dataKey="value" background={{ fill: '#eee', radius: 5 }} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                </RadialBarChart>
               )}
             </ResponsiveContainer>
           </div>
@@ -1267,6 +1438,11 @@ function SatisfactionTrend({ size, data }: { size: WidgetSize; data: ReturnType<
   const xl = size === "xl"
   const compact = size === "sm"
   const latest = data.satisfaction[data.satisfaction.length - 1]
+  const [viz, setViz] = useState<'area' | 'line' | 'bar' | 'pie' | 'radar' | 'radial'>('area')
+  const [showDropdown, setShowDropdown] = useState(false)
+  
+  // Debug logging
+  console.log('SatisfactionTrend render:', { viz, data: data.satisfaction, xl, compact })
   
   return (
     <div className={compact ? "pt-6" : ""}>
@@ -1275,21 +1451,130 @@ function SatisfactionTrend({ size, data }: { size: WidgetSize; data: ReturnType<
           <h3 className="text-sm font-semibold text-neutral-600">Satisfaction Trend</h3>
           {!compact && <p className="text-xs text-neutral-500">Client satisfaction over time</p>}
         </div>
-        <span className="text-2xl">📈</span>
+        <div className="flex items-center gap-2">
+          {!compact && (
+            <div className="relative">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 w-8 p-0"
+                onClick={() => setShowDropdown(!showDropdown)}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+              {showDropdown && (
+                <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-md shadow-lg z-50">
+                  <div className="py-1">
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('area'); setShowDropdown(false); }}
+                    >
+                      Area Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('line'); setShowDropdown(false); }}
+                    >
+                      Line Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('bar'); setShowDropdown(false); }}
+                    >
+                      Bar Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('pie'); setShowDropdown(false); }}
+                    >
+                      Pie Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('radar'); setShowDropdown(false); }}
+                    >
+                      Radar Chart
+                    </button>
+                    <button 
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setViz('radial'); setShowDropdown(false); }}
+                    >
+                      Radial Chart
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <span className="text-2xl">📈</span>
+        </div>
       </div>
       {xl ? (
         <div className="h-32 bg-muted/30 rounded-lg border border-border/20 flex items-center justify-center">
-          <div className="w-full px-6">
-            <div className="h-2 rounded-full bg-gradient-to-r from-green-400 to-green-600 mb-3" />
-            <div className="flex justify-between text-xs text-neutral-600">
-              <span>Jan</span>
-              <span>Feb</span>
-              <span>Mar</span>
-              <span>Apr</span>
-              <span>May</span>
-              <span>Jun</span>
-            </div>
-          </div>
+          <div className="w-full h-full px-4">
+            <ResponsiveContainer width="100%" height="100%">
+              {viz === 'area' ? (
+                <AreaChart data={data.satisfaction} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
+                  <defs>
+                    <linearGradient id="satisfactionG" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={1}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.3}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} domain={[0, 100]} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                  <Area type="monotone" dataKey="score" stroke="#10b981" fill="url(#satisfactionG)" strokeWidth={2} fillOpacity={1} />
+                </AreaChart>
+              ) : viz === 'line' ? (
+                <LineChart data={data.satisfaction} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} domain={[0, 100]} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                  <Line type="monotone" dataKey="score" stroke="#10b981" strokeWidth={2} dot />
+                </LineChart>
+              ) : viz === 'bar' ? (
+                <BarChart data={data.satisfaction} margin={{ top: 10, right: 10, left: 0, bottom: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} domain={[0, 100]} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                  <Bar dataKey="score" fill="#10b981" radius={[4,4,0,0]} />
+                </BarChart>
+              ) : viz === 'pie' ? (
+                <PieChart>
+                  <Pie
+                    data={data.satisfaction.slice(-3)}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={40}
+                    dataKey="score"
+                    nameKey="month"
+                  >
+                    {data.satisfaction.slice(-3).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={index % 2 === 0 ? "#10b981" : "#34d399"} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                </PieChart>
+              ) : viz === 'radar' ? (
+                <RadarChart data={data.satisfaction.slice(-6)}>
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
+                  <PolarRadiusAxis stroke="hsl(var(--border))" />
+                  <Radar name="Satisfaction" dataKey="score" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
+                  <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                </RadarChart>
+                                                  ) : (
+                    <RadialBarChart data={data.satisfaction.slice(-3)} cx="50%" cy="50%" innerRadius="20%" outerRadius="80%">
+                      <RadialBar dataKey="score" background={{ fill: '#eee', radius: 5 }} />
+                      <Tooltip contentStyle={{ background:'hsl(var(--card))', border:'1px solid hsl(var(--border))', borderRadius:8, fontSize:12, color: 'hsl(var(--foreground))' }} />
+                    </RadialBarChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
         </div>
       ) : compact ? (
                   <div className="text-center">

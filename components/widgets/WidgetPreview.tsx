@@ -20,7 +20,7 @@ export default function WidgetPreview({ definition, className = '' }: WidgetPrev
   const showChart = (size === 'lg' || size === 'xl') && viz !== 'kpi'
 
   return (
-    <Card className={`bg-white border border-neutral-200 rounded-2xl shadow-sm h-full flex flex-col ${className}`}>
+          <Card className="bg-card border border-border">
       <CardHeader className={`flex flex-row items-center justify-between space-y-0 ${getPadding(size)} pb-2`}>
         <div className="space-y-1 flex-1 min-w-0">
           <CardTitle className={`${getTitleSize(size)} text-neutral-800 truncate`}>

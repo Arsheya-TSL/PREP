@@ -132,6 +132,10 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {state.activeTab === "settings" && (
+          <SettingsPage />
+        )}
       </AppLayout>
 
       {/* Modals */}

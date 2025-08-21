@@ -9,7 +9,7 @@ import WidgetPreview from '../widgets/WidgetPreview'
 import { WidgetDefinition, ParsedWidgetIntent } from '../../lib/types'
 import { parseUtilityIntent, handleClarification } from '../../lib/utilityParser'
 import { UtilityWidgetDef } from '../../lib/utilityTypes'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog'
 import WorldClockWidget from '../widgets/WorldClockWidget'
 import WeatherWidget from '../widgets/WeatherWidget'
 
@@ -127,20 +127,18 @@ export default function TypeToCreateWidgetModal({ isOpen, onClose, onInsertWidge
       console.log('🎭 TypeToCreateWidgetModal onOpenChange:', open)
       if (!open) onClose()
     }}>
-      <DialogContent className="w-[1400px] h-[900px] bg-white p-6 !max-w-none">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-xl font-semibold">
-            <Sparkles className="h-6 w-6 text-blue-600" />
-            Type to Create Widget
-          </DialogTitle>
+              <DialogContent className="w-[90vw] max-w-[1280px] h-[90vh] !max-w-none bg-card border border-border dark:bg-background/80 backdrop-blur-md p-0 flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-2 border-b border-border bg-card/30">
+          <DialogTitle className="text-foreground">✨ Type to Create Widget</DialogTitle>
+          <DialogDescription className="text-muted-foreground">Describe your widget and see a live preview</DialogDescription>
         </DialogHeader>
         
-        <div className="flex gap-6 h-full mt-4">
+        <div className="flex gap-6 h-full p-6 flex-1 overflow-hidden">
           {/* Left Pane - Editor */}
           <div className="flex-1 flex flex-col gap-6">
             {/* Natural Language Input */}
             <div className="space-y-4">
-              <Label htmlFor="widget-prompt" className="text-base font-medium text-neutral-900">
+              <Label htmlFor="widget-prompt" className="text-base font-medium text-foreground">
                 Describe the widget you want
               </Label>
               <Textarea
@@ -148,7 +146,7 @@ export default function TypeToCreateWidgetModal({ isOpen, onClose, onInsertWidge
                 placeholder="e.g., Show ITTs due in the next 14 days by region as a bar chart"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="min-h-[160px] text-base resize-none rounded-xl border border-neutral-300 focus:border-neutral-400 focus:ring-2 focus:ring-black/10"
+                className="min-h-[160px] text-base resize-none rounded-xl border border-border focus:border-border focus:ring-2 focus:ring-ring bg-background text-foreground"
               />
               
               {/* Example Prompts */}
@@ -245,7 +243,7 @@ export default function TypeToCreateWidgetModal({ isOpen, onClose, onInsertWidge
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-4 mt-6 pt-4 border-t border-neutral-200">
+        <div className="flex items-center justify-between gap-4 px-6 py-4 border-t border-border mt-auto">
           <Button
             variant="ghost"
             onClick={onClose}

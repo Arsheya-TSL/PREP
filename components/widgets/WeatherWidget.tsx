@@ -298,7 +298,7 @@ export default function WeatherWidget({ config, size, className = '' }: WeatherW
   };
   
   return (
-    <Card className={`bg-white border border-neutral-200 rounded-2xl shadow-sm h-full flex flex-col ${className}`}>
+    <Card className="bg-card border border-border">
       <CardHeader className={`${styles.container} pb-3`}>
         <CardTitle className={`${styles.title} text-neutral-800 flex items-center justify-between`}>
           <span>Weather</span>

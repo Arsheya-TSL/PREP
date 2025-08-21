@@ -1,7 +1,20 @@
-import { Bell, Search, Building2, PanelLeft } from "lucide-react"
+import { Bell, Search, Building2, PanelLeft, MoreHorizontal } from "lucide-react"
 import { Button } from "../ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu"
 import { Input } from "../ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import { Avatar, AvatarFallback } from "../ui/avatar"
 import { projects } from "../../lib/constants"
 import { SidebarTrigger } from "../ui/sidebar"
@@ -16,6 +29,8 @@ interface AppHeaderProps {
 export default function AppHeader({ screenSize }: AppHeaderProps) {
   const { range, setRange, editMode, setEditMode } = useDashboardStore()
   const [projectFilter, setProjectFilter] = useState("All Projects")
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false)
+  const [showRangeDropdown, setShowRangeDropdown] = useState(false)
   
   return (
     <header className="border-b border-border bg-background/80 backdrop-blur-md px-6 py-4 shadow-sm shrink-0 relative z-20">
@@ -24,16 +39,19 @@ export default function AppHeader({ screenSize }: AppHeaderProps) {
           <SidebarTrigger className="h-11 w-11 rounded-xl hover:bg-accent transition-colors">
             <PanelLeft className="h-5 w-5" />
           </SidebarTrigger>
-          <Select value={projectFilter} onValueChange={setProjectFilter}>
-            <SelectTrigger className="w-48 h-11 border-border bg-card shadow-sm hover:shadow-md transition-shadow">
-              <SelectValue placeholder="All Projects" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All Projects">All Projects</SelectItem>
-              <SelectItem value="Active Projects">Active Projects</SelectItem>
-              <SelectItem value="Completed Projects">Completed Projects</SelectItem>
-            </SelectContent>
-          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 px-3">{projectFilter}</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="start">
+              <DropdownMenuLabel>Projects</DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => setProjectFilter('All Projects')}>All Projects</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setProjectFilter('Active Projects')}>Active Projects</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setProjectFilter('Completed Projects')}>Completed Projects</DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {screenSize !== 'mobile' && (
             <div className="relative">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -46,17 +64,20 @@ export default function AppHeader({ screenSize }: AppHeaderProps) {
         </div>
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          <Select value={`${range} view`} onValueChange={(v) => setRange((v.split(" ")[0] as any) || "Monthly")}>
-            <SelectTrigger className="w-48 h-11 border-border bg-card shadow-sm hover:shadow-md transition-shadow">
-              <SelectValue placeholder="Monthly view" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Monthly view">Monthly view</SelectItem>
-              <SelectItem value="Quarterly view">Quarterly view</SelectItem>
-              <SelectItem value="Yearly view">Yearly view</SelectItem>
-              <SelectItem value="Custom view">Custom view</SelectItem>
-            </SelectContent>
-          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 px-3">{range} view</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end">
+              <DropdownMenuLabel>Range</DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={() => setRange('Monthly')}>Monthly view</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setRange('Quarterly')}>Quarterly view</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setRange('Yearly')}>Yearly view</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setRange('Custom')}>Custom view</DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button 
             variant="ghost" 
             onClick={() => setEditMode(!editMode)}

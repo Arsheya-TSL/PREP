@@ -1,5 +1,5 @@
 export type WidgetSize = 'small' | 'medium' | 'large' | 'extra-large'
-export type PageType = 'dashboard' | 'projects' | 'supply-chain' | 'itt-manager' | 'cost-system' | 'world-map'
+export type PageType = 'dashboard' | 'projects' | 'supply-chain' | 'itt-manager' | 'cost-system' | 'world-map' | 'settings'
 export type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly'
 
 export interface Project {
@@ -131,6 +131,7 @@ export interface ITTFormData {
 
 export interface ProjectFormData {
   name: string
+  client?: string
   location: string
   latitude?: string
   longitude?: string
@@ -140,6 +141,8 @@ export interface ProjectFormData {
   description: string
   budget: string
   size: string
+  type?: string
+  estimatedSizeSqm?: string
   template: string
   materials: string[]
   tradeCategories: string[]

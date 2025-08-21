@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useMemo } from "react"
 import { Plus, BarChart3, FileText } from "lucide-react"
 import { Button } from "../ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog"
@@ -8,6 +8,53 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
 import { ProjectFormData, TenderDraft } from "../../lib/types"
 import { projects, regionData } from "../../lib/constants"
+
+// ReviewRow component for the final review page
+function ReviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="space-y-1">
+      <div className="text-xs font-semibold text-muted-foreground uppercase">{label}</div>
+      <div className="text-sm font-bold text-foreground">{value}</div>
+    </div>
+  )
+}
+// CreatableInput below uses hooks already imported; no need to re-import React hooks here
+
+function CreatableInput({ value, onChange, placeholder, suggestions }: { value: string; onChange: (v: string) => void; placeholder?: string; suggestions: string[] }) {
+  const [open, setOpen] = useState(false)
+  const [input, setInput] = useState(value || '')
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => { setInput(value || '') }, [value])
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (!containerRef.current?.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+  const filtered = useMemo(() => suggestions.filter(s => s.toLowerCase().includes(input.toLowerCase())), [input, suggestions])
+  return (
+    <div className="relative" ref={containerRef}>
+      <input
+        className="h-12 w-full text-base border border-border rounded-md bg-background text-foreground px-3"
+        value={input}
+        onChange={(e) => { setInput(e.target.value); setOpen(true) }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') { onChange(input.trim()); setOpen(false) }
+        }}
+        placeholder={placeholder}
+      />
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-popover text-foreground border border-border rounded-md shadow-lg max-h-48 overflow-auto z-[100]">
+          {filtered.length > 0 ? filtered.map((s) => (
+            <button key={s} type="button" className="w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground" onClick={() => { onChange(s); setInput(s); setOpen(false) }}>{s}</button>
+          )) : (
+            <div className="px-3 py-2 text-muted-foreground">Type and press Enter to add</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 // Working World Map Canvas Component (from WorldMapPage)
 function WorldMapCanvas() {
@@ -67,7 +114,7 @@ function WorldMapCanvas() {
     const onResize = () => setWrapperHeight()
     document.addEventListener('fullscreenchange', onFsChange)
     window.addEventListener('resize', onResize)
-    
+
 
 
 
@@ -350,6 +397,10 @@ export default function ProjectsPage({
   const [newMaterial, setNewMaterial] = useState("")
   const [countrySearch, setCountrySearch] = useState("")
   const [showCountryDropdown, setShowCountryDropdown] = useState(false)
+  // Live FX state
+  const [localCurrencyCode, setLocalCurrencyCode] = useState<string>("GBP")
+  const [fxRateToLocal, setFxRateToLocal] = useState<number>(1)
+  const [fxError, setFxError] = useState<string>("")
   const previewRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<any>(null)
   
@@ -496,7 +547,87 @@ export default function ProjectsPage({
   // Filter countries based on search
   const filteredCountries = allCountries.filter(country =>
     country.toLowerCase().includes(countrySearch.toLowerCase())
-  ).slice(0, 10) // Limit to 10 results for performance
+  )
+
+  // Normalize common country names for API lookup
+  const normalizeCountryName = (name: string) => {
+    const map: Record<string, string> = {
+      UK: 'United Kingdom',
+      'U.K.': 'United Kingdom',
+      'United Kingdom of Great Britain and Northern Ireland': 'United Kingdom',
+      USA: 'United States',
+      'U.S.A.': 'United States',
+    }
+    return map[name] || name
+  }
+
+  // Fetch currency for selected country (RestCountries), with graceful fallback
+  useEffect(() => {
+    const country = normalizeCountryName(selectedCountry || projectFormData.country || '')
+    if (!country) return
+    let cancelled = false
+    const run = async () => {
+      try {
+        setFxError("")
+        // Try fullText exact match first
+        let res = await fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(country)}?fullText=true&fields=currencies`)
+        if (!res.ok) {
+          // Fallback to non-fullText
+          res = await fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(country)}?fields=currencies`)
+        }
+        if (!res.ok) throw new Error('country lookup failed')
+        const data = await res.json()
+        const currencies = data?.[0]?.currencies
+        const code = currencies ? Object.keys(currencies)[0] : 'GBP'
+        if (!cancelled) setLocalCurrencyCode(code || 'GBP')
+      } catch (e) {
+        if (!cancelled) {
+          setLocalCurrencyCode('GBP')
+          setFxError('') // do not show error here; we can still show GBP only
+        }
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [selectedCountry, projectFormData.country])
+
+  // Fetch FX rate GBP -> local currency with robust fallback
+  useEffect(() => {
+    if (!localCurrencyCode) return
+    let cancelled = false
+    const run = async () => {
+      try {
+        setFxError("")
+        if (localCurrencyCode === 'GBP') { setFxRateToLocal(1); return }
+        // Primary: open.er-api.com
+        let res = await fetch(`https://open.er-api.com/v6/latest/GBP`)
+        let rate: number | undefined
+        if (res.ok) {
+          const data = await res.json()
+          rate = data?.rates?.[localCurrencyCode]
+        }
+        // Fallback: exchangerate.host
+        if (!rate) {
+          const res2 = await fetch(`https://api.exchangerate.host/latest?base=GBP&symbols=${encodeURIComponent(localCurrencyCode)}`)
+          if (res2.ok) {
+            const data2 = await res2.json()
+            rate = data2?.rates?.[localCurrencyCode]
+          }
+        }
+        if (!rate) throw new Error('rate missing')
+        if (!cancelled) setFxRateToLocal(rate)
+      } catch (e) {
+        if (!cancelled) {
+          setFxRateToLocal(1)
+          setFxError('Live FX unavailable; showing GBP')
+        }
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [localCurrencyCode])
+
+  
 
   // Initialize map picker
   const initializeMapPicker = () => {
@@ -762,11 +893,11 @@ export default function ProjectsPage({
 
   return (
     <div className="space-y-6">
-             {/* Page Header */}
-       <div className="mb-6">
-         <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">Projects</h1>
-         <p className="text-muted-foreground mt-1">Comprehensive project management and analytics</p>
-       </div>
+      {/* Page Header */}
+      <div className="mb-6">
+                  <h1 className="text-2xl sm:text-3xl font-semibold text-foreground">Projects</h1>
+          <p className="text-muted-foreground mt-1">Comprehensive project management and analytics</p>
+      </div>
 
       {/* Action Buttons */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -789,8 +920,8 @@ export default function ProjectsPage({
             </Button>
           </DialogTrigger>
           
-          <DialogContent className="w-[60vw] max-w-4xl h-[75vh] !max-w-none bg-background/80 backdrop-blur-md border border-border" style={{ width: '60vw', maxWidth: '900px', zIndex: 50 }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-            <DialogHeader className="border-b border-border pb-4 bg-card/50 rounded-t-lg">
+                     <DialogContent className="w-[60vw] max-w-4xl h-[75vh] !max-w-none bg-card border border-border dark:bg-background/80 backdrop-blur-md flex flex-col" style={{ width: '60vw', maxWidth: '900px', zIndex: 50 }} onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+            <DialogHeader className="border-b border-border pb-4 bg-card/50 rounded-t-lg flex-shrink-0">
               <div className="flex items-center justify-between">
                 {/* Left Side - Title */}
                 <div>
@@ -804,7 +935,7 @@ export default function ProjectsPage({
                 <div className="flex items-center gap-3">
                   {/* Mini Stepper */}
                   <div className="flex items-center gap-2">
-                    {[1,2,3,4].map((step, index) => (
+                    {[1,2,3].map((step, index) => (
                       <div key={step} className="flex items-center">
                         <button
                           onClick={() => setTenderStep(step as 1|2|3|4)}
@@ -837,7 +968,7 @@ export default function ProjectsPage({
             </DialogHeader>
 
             {/* Form Content */}
-            <div className="flex-1 py-4">
+            <div className="flex-1 py-4 overflow-y-auto">
               <div className="flex gap-6">
                 {/* Left Side - Form */}
               <div className="flex-1 space-y-4">
@@ -904,7 +1035,7 @@ export default function ProjectsPage({
                                   ) : countrySearch ? (
                                     <div className="px-3 py-2 text-muted-foreground text-base">
                                       No countries found
-                                    </div>
+                  </div>
                                   ) : (
                                     <div className="px-3 py-2 text-muted-foreground text-base">
                                       Type to search...
@@ -941,6 +1072,21 @@ export default function ProjectsPage({
                               onChange={(e) => setProjectFormData({ ...projectFormData, name: e.target.value })} 
                               placeholder="Project name" 
                             />
+                  </div>
+
+                  {/* Client dropdown with creatable input */}
+                  <div className="space-y-2 col-span-2">
+                    <label className="text-base font-bold text-foreground flex items-center gap-1">
+                      🧑‍💼 Client
+                    </label>
+                    <CreatableInput
+                      value={projectFormData.client || ''}
+                      onChange={(v) => setProjectFormData({ ...projectFormData, client: v })}
+                      placeholder="Select or type to add a client"
+                      suggestions={[
+                        'Google','Amazon','ARS','AWS','Microsoft','NewCold','Smartparc','Lidl','Iron Mountain','Jet 2','Rolls Royce','Tritax','GLP','Greggs','Pfizer'
+                      ]}
+                    />
                   </div>
                           
                   <div className="space-y-2">
@@ -1016,41 +1162,89 @@ export default function ProjectsPage({
                   <div className="space-y-4">
                       <div className="mb-4 p-4 bg-card rounded-xl border border-border">
                         <h3 className="text-lg font-bold text-foreground mb-1 flex items-center gap-2">
-                          💰 Scope & Budget
+                          💰 Scope and Value
                         </h3>
                         <p className="text-muted-foreground text-sm">Define the project scope and financial details</p>
                       </div>
                       
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                            <label className="text-base font-bold text-foreground flex items-center gap-1">
-                              📏 Project Size
-                            </label>
-                            <Select value={projectFormData.size} onValueChange={(value) => setProjectFormData({ ...projectFormData, size: value })}>
-                              <SelectTrigger className="h-12 text-base">
-                                <SelectValue placeholder="🔽 Select project size" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="0-500">📐 Small (0–500 m²)</SelectItem>
-                                <SelectItem value="500-2000">🏢 Medium (500–2,000 m²)</SelectItem>
-                                <SelectItem value="2000-10000">🏗️ Large (2,000–10,000 m²)</SelectItem>
-                                <SelectItem value="10000-50000">🏭 Very Large (10,000–50,000 m²)</SelectItem>
-                                <SelectItem value=">50000">🌆 Mega Project (50,000+ m²)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          
                           <div className="space-y-2">
                             <label className="text-base font-bold text-foreground flex items-center gap-1">
-                              💷 Estimated Budget
+                              💷 Estimated Value
                             </label>
-                            <Input 
-                              className="h-12 text-base" 
-                              value={projectFormData.budget} 
-                              onChange={(e) => setProjectFormData({ ...projectFormData, budget: e.target.value })} 
-                              placeholder="💰 e.g. £250,000" 
-                            />
+                            {(() => {
+                              // Simple country->currency mapping and rough GBP conversion factors
+                              const countryToCurrency: Record<string, { code: string; symbol: string; ratePerGBP: number }> = {
+                                'United Kingdom': { code: 'GBP', symbol: '£', ratePerGBP: 1 },
+                                'UK': { code: 'GBP', symbol: '£', ratePerGBP: 1 },
+                                'Germany': { code: 'EUR', symbol: '€', ratePerGBP: 1.17 },
+                                'France': { code: 'EUR', symbol: '€', ratePerGBP: 1.17 },
+                                'Netherlands': { code: 'EUR', symbol: '€', ratePerGBP: 1.17 },
+                                'Spain': { code: 'EUR', symbol: '€', ratePerGBP: 1.17 },
+                                'United States': { code: 'USD', symbol: '$', ratePerGBP: 1.25 },
+                                'USA': { code: 'USD', symbol: '$', ratePerGBP: 1.25 },
+                                'Albania': { code: 'ALL', symbol: 'L', ratePerGBP: 125 },
+                              }
+                              const country = (selectedCountry || projectFormData.country || 'UK') as string
+                              const curInfo = countryToCurrency[country] || { code: 'GBP', symbol: '£', ratePerGBP: 1 }
+                              const gbpValue = parseFloat(projectFormData.budget || '0') || 0
+                              const fmt = (n: number, c: string) => new Intl.NumberFormat(undefined, { style: 'currency', currency: c }).format(n)
+                              const localVal = gbpValue * curInfo.ratePerGBP
+                              return (
+                                <>
+                                  <div className="flex gap-2 items-center">
+                                    <div className="h-12 w-28 flex items-center justify-center rounded-md border border-border bg-muted/30 text-sm">£ GBP</div>
+                                    <Input
+                                      className="h-12 text-base flex-1"
+                                      value={projectFormData.budget}
+                                      onChange={(e) => {
+                                        const raw = e.target.value.replace(/[^0-9.]/g, '')
+                                        setProjectFormData({ ...projectFormData, budget: raw })
+                                      }}
+                                      placeholder="£ e.g. 250,000"
+                                      inputMode="decimal"
+                                    />
+                                  </div>
+                                  {projectFormData.budget && (
+                                    <div className="text-sm text-muted-foreground">
+                                      {fxError ? (
+                                        <>£ {Number(projectFormData.budget).toLocaleString()} GBP</>
+                                      ) : (
+                                        <>
+                                          {new Intl.NumberFormat(undefined, { style: 'currency', currency: localCurrencyCode }).format((parseFloat(projectFormData.budget || '0') || 0) * fxRateToLocal)} ({country}) • {fmt(parseFloat(projectFormData.budget || '0') || 0, 'GBP')} GBP
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
+                                </>
+                              )
+                            })()}
+                          </div>
+
+                          {/* Type (creatable) and Estimated Size */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-base font-bold text-foreground flex items-center gap-1">Type <span className="text-destructive">*</span></label>
+                              <CreatableInput
+                                value={projectFormData.type || ''}
+                                onChange={(v) => setProjectFormData({ ...projectFormData, type: v })}
+                                placeholder="Select or type a project type"
+                                suggestions={[
+                                  'Datacentre','Logistics','Aerospace','High Tech','Food Processing','Cold Store','Pharmaceuticals'
+                                ]}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-base font-bold text-foreground flex items-center gap-1">Estimated Size (sqm)</label>
+                              <Input
+                                className="h-12 text-base"
+                                value={projectFormData.estimatedSizeSqm || ''}
+                                onChange={(e) => setProjectFormData({ ...projectFormData, estimatedSizeSqm: e.target.value.replace(/[^0-9.]/g,'') })}
+                                placeholder="e.g. 7,500"
+                                inputMode="decimal"
+                              />
+                            </div>
                           </div>
                         </div>
                         
@@ -1069,148 +1263,67 @@ export default function ProjectsPage({
                   </div>
                 )}
 
+                  {/* Step 3 removed */}
+
                   {tenderStep === 3 && (
-                    <div className="space-y-4">
-                                            <div className="mb-4 p-4 bg-card rounded-xl border border-border">
-                        <h3 className="text-lg font-bold text-foreground mb-1 flex items-center gap-2">
-                          ✅ Compliance Requirements
-                        </h3>
-                        <p className="text-muted-foreground text-sm">Specify compliance requirements for this project</p>
+                    <div className="space-y-3">
+                      <div className="p-3 bg-card rounded-lg border border-border">
+                        <h3 className="text-base md:text-lg font-bold text-foreground flex items-center gap-2">📝 Review & Submit</h3>
+                        <p className="text-xs md:text-sm text-muted-foreground">Complete summary of your tender</p>
                       </div>
-                      
-                      <div className="space-y-4">
-                        
-                        <div className="space-y-3">
-                          <label className="text-base font-bold text-foreground flex items-center gap-1">
-                            ✅ Compliance Requirements
-                          </label>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {['ISO 9001', 'NICEIC', 'CE Mark', 'CHAS'].map((req) => (
-                              <label key={req} className="flex items-center gap-3 p-4 border border-border rounded-lg hover:bg-accent cursor-pointer transition-all">
-                                <input 
-                                  type="checkbox" 
-                                  className="w-6 h-6 text-primary rounded focus:ring-primary" 
-                                  checked={projectFormData.compliance.includes(req)} 
-                                  onChange={(e) => {
-                                    const checked = e.target.checked
-                                    setProjectFormData({
-                                      ...projectFormData,
-                                      compliance: checked ? [...projectFormData.compliance, req] : projectFormData.compliance.filter((r) => r !== req)
-                                    })
-                                  }} 
-                                />
-                                <span className="text-base font-semibold text-foreground">{req}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
-                  {tenderStep === 4 && (
-                    <div className="space-y-4">
-                      <div className="mb-4 p-4 bg-card rounded-xl border border-border">
-                        <h3 className="text-lg font-bold text-foreground mb-1 flex items-center gap-2">
-                          📝 Review & Submit
-                        </h3>
-                        <p className="text-muted-foreground text-sm">Review your tender details before submitting</p>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                📝 Project Name
-                              </span>
-                              <p className="text-xl font-bold text-foreground">{projectFormData.name || 'Not specified'}</p>
-                            </div>
-                            <div>
-                              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                🌍 Country
-                              </span>
-                              <p className="text-xl font-bold text-foreground">{selectedCountry || projectFormData.country || 'Not specified'}</p>
+                      <div className="bg-card border border-border rounded-lg p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <ReviewRow label="Project Name" value={projectFormData.name || '—'} />
+                          <ReviewRow label="Client" value={projectFormData.client || '—'} />
+                          <ReviewRow label="Country" value={selectedCountry || projectFormData.country || '—'} />
+                          <ReviewRow label="Location" value={projectFormData.location || '—'} />
+                          <ReviewRow label="Start Date" value={projectFormData.startDate || '—'} />
+                          <ReviewRow label="End Date" value={projectFormData.endDate || '—'} />
+                          <ReviewRow label="Type" value={projectFormData.type || '—'} />
+                          {/* Project Size removed per request */}
+                          <ReviewRow label="Estimated Size (sqm)" value={projectFormData.estimatedSizeSqm || '—'} />
+                          <div className="space-y-1">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase">Estimated Value</div>
+                            <div className="text-sm font-bold text-foreground">
+                              {(() => {
+                                const gbpVal = parseFloat(projectFormData.budget || '0') || 0
+                                const gbpStr = new Intl.NumberFormat(undefined, { style:'currency', currency:'GBP'}).format(gbpVal)
+                                const localStr = new Intl.NumberFormat(undefined, { style:'currency', currency: localCurrencyCode }).format(gbpVal * fxRateToLocal)
+                                return fxError ? gbpStr : `${localStr} (${selectedCountry || projectFormData.country || 'Local'}) • ${gbpStr} GBP`
+                              })()}
                             </div>
                           </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                📅 Timeline
-                              </span>
-                              <p className="text-xl font-bold text-foreground">
-                                {projectFormData.startDate || 'Not set'} → {projectFormData.endDate || 'Not set'}
-                              </p>
-                            </div>
-                            <div>
-                              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                📏 Size & Budget
-                              </span>
-                              <p className="text-xl font-bold text-foreground">
-                                {projectFormData.size || 'Not specified'} • {projectFormData.budget || 'Not specified'}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {projectFormData.description && (
-                            <div>
-                              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                💭 Description
-                              </span>
-                              <p className="text-base font-medium text-foreground">{projectFormData.description}</p>
-                            </div>
-                          )}
-                          
-                          {projectFormData.materials.length > 0 && (
-                            <div>
-                                                            <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                🔧 Materials
-                              </span>
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {projectFormData.materials.map((m, idx) => (
-                                  <span key={idx} className="px-3 py-2 bg-primary/10 text-primary rounded-full text-sm font-semibold border border-primary/30">
-                                    🔧 {m}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                        </div>
 
-                          {projectFormData.compliance.length > 0 && (
-                            <div>
-                              <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                                ✅ Compliance
-                              </span>
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                {projectFormData.compliance.map((c, idx) => (
-                                  <span key={idx} className="px-3 py-2 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full text-sm font-semibold border border-green-500/30">
-                                    ✅ {c}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="bg-card border border-border rounded-xl p-6">
-                          <label className="flex items-start gap-3 cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              className="w-6 h-6 text-primary mt-1 rounded focus:ring-primary" 
-                              checked={createITTNow} 
-                              onChange={(e) => setCreateITTNow(e.target.checked)} 
-                            />
-                            <div>
-                              <span className="text-lg font-bold text-foreground flex items-center gap-2">
-                                🚀 Create ITT immediately
-                              </span>
-                              <p className="text-muted-foreground text-sm mt-1 font-medium">
-                                Automatically create and assign an Invitation to Tender for this project after submission
-                              </p>
-                            </div>
-                          </label>
-                        </div>
+                        {projectFormData.description && (
+                          <div className="mt-3">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase">Description</div>
+                            <div className="text-sm text-foreground leading-relaxed">{projectFormData.description}</div>
+                          </div>
+                        )}
+                        {projectFormData.specialRequirements && (
+                          <div className="mt-3">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase">Special Requirements</div>
+                            <div className="text-sm text-foreground leading-relaxed">{projectFormData.specialRequirements}</div>
+                          </div>
+                        )}
+                        {projectFormData.latitude && projectFormData.longitude && (
+                          <div className="mt-3">
+                            <div className="text-xs font-semibold text-muted-foreground uppercase">Coordinates</div>
+                            <div className="text-sm text-foreground">📍 {projectFormData.latitude}, {projectFormData.longitude}</div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="bg-card border border-border rounded-lg p-4">
+                        <label className="flex items-start gap-3 cursor-pointer">
+                          <input type="checkbox" className="w-5 h-5 text-primary mt-0.5 rounded focus:ring-primary" checked={createITTNow} onChange={(e) => setCreateITTNow(e.target.checked)} />
+                          <div>
+                            <div className="text-sm md:text-base font-bold text-foreground flex items-center gap-2">🚀 Create ITT immediately</div>
+                            <p className="text-xs md:text-sm text-muted-foreground">Automatically create and assign an Invitation to Tender after submission</p>
+                          </div>
+                        </label>
                       </div>
                     </div>
                   )}
@@ -1250,15 +1363,15 @@ export default function ProjectsPage({
                                 href={`https://www.openstreetmap.org/?mlat=${projectFormData.latitude}&mlon=${projectFormData.longitude}#map=14/${projectFormData.latitude}/${projectFormData.longitude}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                  className="bg-primary hover:opacity-90 text-primary-foreground text-sm px-3 py-1 rounded shadow-sm transition-colors"
+                                className="bg-primary hover:opacity-90 text-primary-foreground text-sm px-3 py-1 rounded shadow-sm transition-colors"
                               >
                                 View Full
                               </a>
                             </div>
                           </div>
                           
-                                                        <div className="text-sm text-green-500 font-mono bg-green-500/10 p-3 rounded border border-green-500/30 text-center">
-                              Lat: {projectFormData.latitude} | Lng: {projectFormData.longitude}
+                          <div className="text-sm text-green-500 font-mono bg-green-500/10 p-3 rounded border border-green-500/30 text-center">
+                            Lat: {projectFormData.latitude} | Lng: {projectFormData.longitude}
                             </div>
                           </div>
                         </div>
@@ -1279,14 +1392,14 @@ export default function ProjectsPage({
               </div>
 
             {/* Bottom Actions */}
-            <div className="border-t border-border pt-4 mt-4">
+            <div className="border-t border-border pt-4 mt-4 flex-shrink-0">
               <div className="flex items-center justify-between px-2">
                 <Button 
                   variant="outline" 
                   className="h-14 px-8 text-base" 
                   onClick={() => {
                     const draft = {
-                      currentStep: tenderStep as 1|2|3|4,
+                      currentStep: tenderStep as 1|2|3,
                       selectedCountry,
                       formData: projectFormData
                     }
@@ -1308,7 +1421,7 @@ export default function ProjectsPage({
                     </Button>
                   )}
                   
-                  {tenderStep < 4 ? (
+                  {tenderStep < 3 ? (
                     <Button 
                       className="h-14 px-10 text-base" 
                       onClick={() => {
@@ -1423,7 +1536,7 @@ export default function ProjectsPage({
       )}
 
       {/* Interactive World Map */}
-               <div className="bg-background/80 backdrop-blur-md rounded-2xl shadow-sm border border-border p-6">
+      <div className="bg-background/80 backdrop-blur-md rounded-2xl shadow-sm border border-border p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -1448,7 +1561,7 @@ export default function ProjectsPage({
         
         {/* Working amCharts World Map from WorldMapPage with overlay */}
         <div ref={mapFullscreenRef} className={`relative transition-all duration-300 ease-in-out ${showMap ? 'opacity-100 max-h-screen' : 'opacity-0 max-h-0 overflow-hidden'}`}>
-          <WorldMapCanvas />
+        <WorldMapCanvas />
           {/* Fullscreen button */}
           <button
             className="absolute top-3 right-3 bg-background/90 backdrop-blur px-3 py-1.5 rounded-md border border-border text-xs text-foreground hover:bg-accent hover:text-accent-foreground shadow-sm"
@@ -1472,7 +1585,7 @@ export default function ProjectsPage({
                 <div className="flex items-center gap-2">
                   <div className="text-[10px] text-muted-foreground hidden sm:block">
                     {calculateRegionalStats().reduce((sum, r) => sum + r.activeProjects, 0)} projects • {calculateRegionalStats().length} regions
-                  </div>
+              </div>
                   <button
                     onClick={() => setShowRegionOverlay(!showRegionOverlay)}
                     className="text-[10px] px-2 py-0.5 rounded-md border border-border bg-background hover:bg-accent hover:text-accent-foreground text-muted-foreground"
@@ -1498,10 +1611,10 @@ export default function ProjectsPage({
                               <span className="text-green-500 tabular-nums">{region.projectsOnTime}%</span>
                             )}
                             <span className="text-foreground font-medium tabular-nums">{region.activeProjects}</span>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
+              </div>
+            </div>
+          ))}
+        </div>
                   {calculateRegionalStats().length > 8 && (
                     <div className="px-2.5 py-1.5 bg-muted/30 flex items-center justify-center">
                       <Button 
@@ -1527,8 +1640,7 @@ export default function ProjectsPage({
                <div className="bg-background/80 backdrop-blur-md rounded-2xl shadow-sm border border-border p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">📋 Projects In Progress</h2>
-            <p className="text-sm text-muted-foreground">Current active projects across all regions</p>
+          <h2 className="text-lg font-semibold text-foreground">📋 Tenders in Progress</h2>
           </div>
           <Button 
             variant="outline" 
@@ -1608,7 +1720,7 @@ export default function ProjectsPage({
                 <div className="flex items-center justify-between pt-2 border-t">
                   <span className="text-xs text-muted-foreground">Due: {project.endDate}</span>
                   <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">Budget:</span>
+                    <span className="text-xs text-muted-foreground">Value:</span>
                     <span className="text-xs font-medium">{project.budget}</span>
                   </div>
                 </div>
@@ -1799,7 +1911,7 @@ export default function ProjectsPage({
 
       {/* Project Detail Modal */}
       <Dialog open={showProjectModal} onOpenChange={setShowProjectModal}>
-        <DialogContent className="w-[99.5vw] h-[96vh] max-w-none !max-w-none bg-background/95 backdrop-blur-md border border-border" style={{ width: '99.5vw', maxWidth: 'none' }}>
+                 <DialogContent className="w-[99.5vw] h-[96vh] max-w-none !max-w-none bg-background/80 backdrop-blur-md border border-border" style={{ width: '99.5vw', maxWidth: 'none' }}>
           <DialogHeader className="border-b border-border pb-4">
             <DialogTitle className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
               {selectedProject?.image || '🏗️'} {selectedProject?.name || 'Project Details'}
@@ -1861,7 +1973,7 @@ export default function ProjectsPage({
                       <h4 className="text-base lg:text-lg font-semibold text-foreground">Financial Details</h4>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-muted-foreground">Budget</span>
+                          <span className="text-sm font-medium text-muted-foreground">Value</span>
                           <span className="text-sm font-semibold text-foreground">{selectedProject.budget}</span>
                         </div>
                         {selectedProject.spent && (

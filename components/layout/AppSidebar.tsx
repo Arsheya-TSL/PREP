@@ -90,12 +90,12 @@ export default function AppSidebar({ activeTab, setActiveTab, mode }: AppSidebar
   return (
     <div className="h-full flex flex-col bg-card">
       {/* Header */}
-      <div className="border-b border-border px-6 py-6 bg-card">
-        <div className="flex items-center gap-3">
+      <div className={`border-b border-border bg-card ${isCollapsed ? 'px-3 py-4' : 'px-6 py-6'}`}>
+        <div className="flex items-center gap-3 justify-center">
           <img
             src="/images/TSL_ICON.png"
             alt="TSL Logo"
-            className="h-12 w-auto"
+            className={`${isCollapsed ? 'h-11' : 'h-12'} w-auto`}
           />
           {!isCollapsed && (
             <div>

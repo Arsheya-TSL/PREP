@@ -1,11 +1,13 @@
-import { Building2, DollarSign, Clock3, Award, Package, BarChart3, FileText, Users, TrendingUp, Star, Sparkles, RefreshCw, AlertTriangle, CheckCircle, Truck, Globe, Target, Calendar, Send, CheckCircle2, Zap } from "lucide-react"
+import { Building2, DollarSign, Clock3, Award, Package, BarChart3, FileText, Users, TrendingUp, Star, Sparkles, RefreshCw, AlertTriangle, CheckCircle, Truck, Globe, Target, Calendar, Send, CheckCircle2, Zap, MoreHorizontal } from "lucide-react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
 import { Badge } from "../ui/badge"
 import { Progress } from "../ui/progress"
 import { Button } from "../ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu"
 import { Separator } from "../ui/separator"
-import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
+import { ResponsiveContainer, AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, RadialBarChart, RadialBar } from 'recharts'
 import { Widget, ViewMode } from "../../lib/types"
 import { projects, monthlyData, upcomingITTDeadlines, supplierPerformanceData, recentInsights, activeITTs } from "../../lib/constants"
 import { 
@@ -31,11 +33,7 @@ interface WidgetRendererProps {
 }
 
 export default function WidgetRenderer({ widget, viewMode, setViewMode, screenSize = 'desktop', userITTs = [] }: WidgetRendererProps) {
-  const baseCardClass = `
-    bg-white border border-border rounded-2xl shadow-lg hover:shadow-xl 
-    transition-all duration-300 h-full flex flex-col group
-    backdrop-blur-sm hover:scale-[1.02] hover:-translate-y-1 relative z-10 pointer-events-auto
-  `
+  const baseCardClass = "bg-card border border-border"
   
   const isCompact = widget.size === 'small'
   const isExpanded = widget.size === 'large' || widget.size === 'extra-large'
@@ -338,6 +336,15 @@ export default function WidgetRenderer({ widget, viewMode, setViewMode, screenSi
       )
 
     case 'budget-vs-spend':
+      const [budgetChartType, setBudgetChartType] = useState<'area' | 'line' | 'bar' | 'pie' | 'radar' | 'radial'>('area')
+      
+      const getBudgetChartHeight = (chartType: string, size: string) => {
+        if (chartType === 'pie' || chartType === 'radar' || chartType === 'radial') {
+          return size === 'xl' ? 'h-64' : size === 'lg' ? 'h-56' : 'h-48'
+        }
+        return size === 'xl' ? 'h-80' : size === 'lg' ? 'h-72' : 'h-64'
+      }
+      
       return (
         <Card className={baseCardClass}>
           <CardHeader className={`${getWidgetPadding(widget.size)} pb-3`}>
@@ -364,9 +371,57 @@ export default function WidgetRenderer({ widget, viewMode, setViewMode, screenSi
                     </SelectContent>
                   </Select>
                 )}
+                {!isCompact && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button aria-label="Chart options" className="p-2 rounded-lg border border-border hover:bg-accent hover:text-accent-foreground bg-background">
+                        <MoreHorizontal className="h-4 w-4 text-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 bg-background border border-border">
+                      <DropdownMenuItem onClick={() => setBudgetChartType('area')} className="cursor-pointer">
+                        Area Chart
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setBudgetChartType('line')} className="cursor-pointer">
+                        Line Chart
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setBudgetChartType('bar')} className="cursor-pointer">
+                        Bar Chart
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setBudgetChartType('pie')} className="cursor-pointer">
+                        Pie Chart
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setBudgetChartType('radar')} className="cursor-pointer">
+                        Radar Chart
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setBudgetChartType('radial')} className="cursor-pointer">
+                        Radial Chart
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
                 <div className={`p-2 bg-green-500/10 rounded-lg ${isCompact ? 'p-1.5' : 'p-2'}`}>
                   <DollarSign className={`${getWidgetIconSize(widget.size)} text-green-600`} />
                 </div>
+                
+                {/* Test Dropdown - Very Visible */}
+                {!isCompact && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="default" size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                        Chart Options
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => setBudgetChartType('area')}>Area Chart</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setBudgetChartType('line')}>Line Chart</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setBudgetChartType('bar')}>Bar Chart</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setBudgetChartType('pie')}>Pie Chart</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setBudgetChartType('radar')}>Radar Chart</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setBudgetChartType('radial')}>Radial Chart</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -380,33 +435,118 @@ export default function WidgetRenderer({ widget, viewMode, setViewMode, screenSi
               )}
             </div>
             {showChart && (
-              <div className="h-32">
+              <div className={getBudgetChartHeight(budgetChartType, widget.size)}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyData}>
-                    <defs>
-                      <linearGradient id={`budgetGradient-${widget.id}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id={`spentGradient-${widget.id}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="month" stroke="#64748b" fontSize={10} />
-                    <YAxis stroke="#64748b" fontSize={10} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        background: '#ffffff', 
-                        border: '1px solid #e2e8f0', 
-                        borderRadius: '8px',
-                        fontSize: '12px'
-                      }} 
-                    />
-                    <Area type="monotone" dataKey="budget" stroke="#3b82f6" fill={`url(#budgetGradient-${widget.id})`} strokeWidth={2} />
-                    <Area type="monotone" dataKey="spent" stroke="#10b981" fill={`url(#spentGradient-${widget.id})`} strokeWidth={2} />
-                  </AreaChart>
+                  {budgetChartType === 'area' ? (
+                    <AreaChart data={monthlyData}>
+                      <defs>
+                        <linearGradient id={`budgetGradient-${widget.id}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id={`spentGradient-${widget.id}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          background: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))', 
+                          borderRadius: '8px',
+                          fontSize: '12px'
+                        }} 
+                      />
+                      <Area type="monotone" dataKey="budget" stroke="#3b82f6" fill={`url(#budgetGradient-${widget.id})`} strokeWidth={2} />
+                      <Area type="monotone" dataKey="spent" stroke="#10b981" fill={`url(#spentGradient-${widget.id})`} strokeWidth={2} />
+                    </AreaChart>
+                  ) : budgetChartType === 'line' ? (
+                    <LineChart data={monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          background: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))', 
+                          borderRadius: '8px',
+                          fontSize: '12px'
+                        }} 
+                      />
+                      <Line type="monotone" dataKey="budget" stroke="#3b82f6" strokeWidth={2} />
+                      <Line type="monotone" dataKey="spent" stroke="#10b981" strokeWidth={2} />
+                    </LineChart>
+                  ) : budgetChartType === 'bar' ? (
+                    <BarChart data={monthlyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          background: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))', 
+                          borderRadius: '8px',
+                          fontSize: '12px'
+                        }} 
+                      />
+                      <Bar dataKey="budget" fill="#3b82f6" />
+                      <Bar dataKey="spent" fill="#10b981" />
+                    </BarChart>
+                  ) : budgetChartType === 'pie' ? (
+                    <PieChart>
+                      <Pie
+                        data={monthlyData.map(item => ({ name: item.month, value: item.budget, color: '#3b82f6' }))}
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={60}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {monthlyData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.budget > entry.spent ? '#3b82f6' : '#10b981'} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ 
+                          background: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))', 
+                          borderRadius: '8px',
+                          fontSize: '12px'
+                        }} 
+                      />
+                    </PieChart>
+                  ) : budgetChartType === 'radar' ? (
+                    <RadarChart data={monthlyData}>
+                      <PolarGrid stroke="hsl(var(--border))" />
+                      <PolarAngleAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                      <PolarRadiusAxis stroke="hsl(var(--muted-foreground))" fontSize={10} />
+                      <Radar name="Budget" dataKey="budget" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                      <Radar name="Spent" dataKey="spent" stroke="#10b981" fill="#10b981" fillOpacity={0.3} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          background: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))', 
+                          borderRadius: '8px',
+                          fontSize: '12px'
+                        }} 
+                      />
+                    </RadarChart>
+                  ) : (
+                    <RadialBarChart data={monthlyData.map(item => ({ name: item.month, value: item.budget, fill: '#3b82f6' }))}>
+                      <RadialBar background={{ fill: '#eee', radius: 5 }} dataKey="value" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          background: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))', 
+                          borderRadius: '8px',
+                          fontSize: '12px'
+                        }} 
+                      />
+                    </RadialBarChart>
+                  )}
                 </ResponsiveContainer>
               </div>
             )}

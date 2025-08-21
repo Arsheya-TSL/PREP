@@ -401,7 +401,7 @@ function SupplyChainGrid({
       {/* Full Screen Suppliers Modal */}
       {showFullScreenSuppliers && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col">
+          <div className="w-full max-w-7xl h-[90vh] flex flex-col bg-card border border-border dark:bg-background/80 rounded-2xl overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-border">
               <div>

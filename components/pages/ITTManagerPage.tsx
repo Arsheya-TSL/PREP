@@ -237,11 +237,11 @@ function ITTGrid({
                             <TableHeader>
                               <TableRow className="border-border hover:bg-accent/50">
                                 <TableHead className="font-medium text-foreground">Project</TableHead>
-                                <TableHead className="font-medium text-foreground">ITT Type</TableHead>
+                                <TableHead className="font-medium text-foreground">Project Type</TableHead>
                                 <TableHead className="font-medium text-foreground">Status</TableHead>
                                 <TableHead className="font-medium text-foreground">Responses</TableHead>
                                 <TableHead className="font-medium text-foreground">Due Date</TableHead>
-                                <TableHead className="font-medium text-foreground">Budget</TableHead>
+                                <TableHead className="font-medium text-foreground">Value</TableHead>
                                 <TableHead className="text-right font-medium text-foreground">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -454,7 +454,7 @@ function ITTGrid({
       {/* Full Screen ITTs Modal */}
       {showFullScreenITTs && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col">
+          <div className="w-full max-w-7xl h-[90vh] flex flex-col bg-card border border-border dark:bg-background/80 rounded-2xl overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-border">
               <div>
@@ -536,7 +536,7 @@ function ITTGrid({
                     className="border-border hover:bg-accent hover:text-accent-foreground"
                     onClick={() => {
                       const selected = filteredITTs.filter((i: any) => selectedITTs.includes(i.id))
-                      const headers = ['Project','Category','Status','Responses','DueDate','Budget','Region']
+                      const headers = ['Project','ProjectType','Status','Responses','DueDate','Value','Region']
                       const rows = selected.map((i: any) => [i.project, i.category, i.status, i.responses, i.deadline, i.budget, i.region])
                       const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
                       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -558,11 +558,11 @@ function ITTGrid({
                     <TableRow className="border-border hover:bg-accent/50">
                       <TableHead className="w-12"></TableHead>
                       <TableHead className="font-medium text-foreground">Project</TableHead>
-                      <TableHead className="font-medium text-foreground">ITT Type</TableHead>
+                      <TableHead className="font-medium text-foreground">Project Type</TableHead>
                       <TableHead className="font-medium text-foreground">Status</TableHead>
                       <TableHead className="font-medium text-foreground">Responses</TableHead>
                       <TableHead className="font-medium text-foreground">Due Date</TableHead>
-                      <TableHead className="font-medium text-foreground">Budget</TableHead>
+                      <TableHead className="font-medium text-foreground">Value</TableHead>
                       <TableHead className="text-right font-medium text-foreground">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -787,8 +787,11 @@ export default function ITTManagerPage({
   const [wizardDesc, setWizardDesc] = useState<string>(ittFormData.description || '')
   const [emailSubject, setEmailSubject] = useState<string>('')
   const [emailBody, setEmailBody] = useState<string>('')
-  const [additionalRecipients, setAdditionalRecipients] = useState<string[]>([])
-  const [newRecipient, setNewRecipient] = useState<string>('')
+  // Separate To and Cc manual recipients
+  const [toManualRecipients, setToManualRecipients] = useState<string[]>([])
+  const [ccManualRecipients, setCcManualRecipients] = useState<string[]>([])
+  const [newToRecipient, setNewToRecipient] = useState<string>('')
+  const [newCcRecipient, setNewCcRecipient] = useState<string>('')
   const [packageInfoLink, setPackageInfoLink] = useState<string>('')
   const [emailHtml, setEmailHtml] = useState<string>('')
   const composeRef = useRef<HTMLDivElement | null>(null)
@@ -813,7 +816,7 @@ export default function ITTManagerPage({
     const suppliersAll = constants.supplierPerformanceData as any[]
     const supplierObjs = suppliersAll.filter(s => wizardSelectedSuppliers.has(s.name))
     const recipients = supplierObjs.map(s => (s.contactEmail || s.contact || '')).filter((e: string) => !!e)
-    const allRecipients = Array.from(new Set([...recipients, ...additionalRecipients.filter((e) => !!e)]))
+    const allRecipients = Array.from(new Set([...recipients, ...toManualRecipients]))
 
     // Validation
     const newErrors: { to?: string; subject?: string } = {}
@@ -843,7 +846,7 @@ export default function ITTManagerPage({
     // Log email object
     const emailObject = {
       to: allRecipients,
-      cc: showCc ? additionalRecipients : undefined,
+      cc: showCc ? ccManualRecipients : undefined,
       subject: emailSubject,
       body: body,
       attachments: attachments
@@ -914,24 +917,23 @@ export default function ITTManagerPage({
     return `${nameWithoutExt.substring(0, half)}...${nameWithoutExt.substring(nameWithoutExt.length - half)}.${ext}`
   }
 
-  const addManualRecipient = (email: string) => {
-    // Recompute all recipients from selected suppliers + additional list
-    const constants = require('../../lib/constants')
-    const suppliersAll = constants.supplierPerformanceData as any[]
-    const supplierObjs = suppliersAll.filter((s: any) => wizardSelectedSuppliers.has(s.name))
-    const recipients = supplierObjs
-      .map((s: any) => (s.contactEmail || s.contact || ''))
-      .filter((e: string) => !!e)
-    const allRecipients = Array.from(new Set([...recipients, ...additionalRecipients.filter((e) => !!e)]))
-
-    if (validateEmail(email) && !allRecipients.includes(email)) {
-      setAdditionalRecipients(prev => [...prev, email])
-      setNewRecipient('')
+  const addManualRecipient = (email: string, type: 'to' | 'cc' = 'to') => {
+    if (!validateEmail(email)) return
+    if (type === 'to') setNewToRecipient('')
+    if (type === 'cc') setNewCcRecipient('')
+    if (type === 'to') {
+      setToManualRecipients(prev => Array.from(new Set([...prev, email])))
+    } else {
+      setCcManualRecipients(prev => Array.from(new Set([...prev, email])))
     }
   }
 
-  const removeManualRecipient = (email: string) => {
-    setAdditionalRecipients(prev => prev.filter(e => e !== email))
+  const removeManualRecipient = (email: string, type: 'to' | 'cc' = 'to') => {
+    if (type === 'to') {
+      setToManualRecipients(prev => prev.filter(e => e !== email))
+    } else {
+      setCcManualRecipients(prev => prev.filter(e => e !== email))
+    }
   }
 
   const stripHtml = (html: string) => {
@@ -948,8 +950,8 @@ export default function ITTManagerPage({
     setWizardDesc('')
     setEmailSubject('')
     setEmailBody('')
-    setAdditionalRecipients([])
-    setNewRecipient('')
+    setToManualRecipients([])
+    setNewToRecipient('')
     setPackageInfoLink('')
     setEmailHtml('')
     setShowCc(false)
@@ -1191,10 +1193,28 @@ export default function ITTManagerPage({
 
       {/* Create ITT Wizard */}
       <Dialog open={showCreateITT} onOpenChange={setShowCreateITT}>
-        <DialogContent className="w-[90vw] max-w-[1280px] h-[90vh] !max-w-none bg-background/80 backdrop-blur-md border border-border p-0 flex flex-col">
+                 <DialogContent className="w-[90vw] max-w-[1280px] h-[90vh] !max-w-none bg-card border border-border dark:bg-background/80 backdrop-blur-md p-0 flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-2 border-b border-border bg-card/50">
-            <DialogTitle className="text-foreground">📋 Create New ITT</DialogTitle>
-            <DialogDescription className="text-muted-foreground">Details → Packages & Suppliers → Review → Send</DialogDescription>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <DialogTitle className="text-foreground text-xl md:text-2xl">📋 Create New ITT</DialogTitle>
+                <DialogDescription className="text-muted-foreground text-sm md:text-base">Details → Packages & Suppliers → Review → Send</DialogDescription>
+              </div>
+              <div className="min-w-[260px] md:min-w-[360px]">
+                <div className="flex items-center justify-end gap-3 mb-2">
+                  {[1,2,3,4].map((n) => (
+                    <div key={`top-${n}`} className="flex items-center gap-2">
+                      <div className={`h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center text-xs md:text-sm font-semibold transition-all ${wizardStep>n ? 'bg-green-600 text-white' : wizardStep===n ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground border border-border'}`}>
+                        {wizardStep>n ? '✓' : n}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="h-1.5 bg-muted rounded">
+                  <div className="h-1.5 bg-primary rounded transition-all" style={{ width: `${((wizardStep-1)/3)*100}%` }} />
+                </div>
+              </div>
+            </div>
           </DialogHeader>
           {(() => {
             // Wizard local state
@@ -1215,24 +1235,9 @@ export default function ITTManagerPage({
             }
             return (
               <div className="flex flex-col h-full overflow-hidden">
-                {/* Steps */}
-                <div className="mb-0 sticky top-0 z-10 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-                  <div className="px-6 pt-4">
-                    <div className="flex items-center gap-4 mb-2">
-                      {[1,2,3,4].map((n) => (
-                        <div key={n} className="flex items-center gap-2">
-                          <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${wizardStep>=n ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground border border-border'}`}>{n}</div>
-                          <span className={`text-base ${wizardStep===n ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>{n===1?'Details':n===2?'Packages & Suppliers':n===3?'Review':'Send'}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="h-2 bg-muted rounded">
-                      <div className="h-2 bg-primary rounded transition-all" style={{ width: `${((wizardStep-1)/3)*100}%` }} />
-                    </div>
-                  </div>
-                </div>
+                {/* Steps moved to header (top-right) */}
 
-                <div className="flex-1 overflow-auto p-6">
+                <div className="flex-1 overflow-hidden p-6">
                   {wizardStep === 1 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -1289,7 +1294,7 @@ export default function ITTManagerPage({
                         <div className="flex items-center justify-between">
                           <Label>Work Packages</Label>
                           <div className="text-xs flex items-center gap-2">
-                            <button className="text-blue-600 hover:underline" onClick={() => setWizardSelectedPackages(new Set(require('../../lib/constants').workPackageNames))}>Select All</button>
+                            <button className="text-blue-600 hover:underline" onClick={() => setWizardSelectedPackages(new Set(require('../../lib/constants').workPackageCodeNames))}>Select All</button>
                             <span className="text-neutral-300">|</span>
                             <button className="text-neutral-600 hover:underline" onClick={() => setWizardSelectedPackages(new Set())}>Clear</button>
                           </div>
@@ -1308,12 +1313,18 @@ export default function ITTManagerPage({
                             }} />
                           </div>
                           <div className="max-h-[50vh] overflow-auto border rounded-md">
-                            {require('../../lib/constants').workPackageNames.map((name: string) => (
-                              <label key={name} data-wp={name} className={`flex items-center justify-between gap-2 text-sm p-2 border-b last:border-b-0 ${wizardSelectedPackages.has(name)?'bg-blue-50':''}`}>
-                                <div className="font-medium">{name}</div>
-                                <input type="checkbox" checked={wizardSelectedPackages.has(name)} onChange={() => setWizardSelectedPackages((s: Set<string>) => toggleInSet(s, name))} />
-                              </label>
-                            ))}
+                            {require('../../lib/constants').workPackagesWithCodes.map((wp: { code: string; name: string }) => {
+                              const label = `${wp.code} - ${wp.name}`
+                              return (
+                                <label key={label} data-wp={label} className={`flex items-center justify-between gap-2 text-sm p-2 border-b last:border-b-0 transition-colors ${wizardSelectedPackages.has(label) ? 'bg-primary/10 text-foreground border-primary' : 'hover:bg-accent hover:text-accent-foreground'}`}>
+                                  <div className="font-medium">
+                                    <span className="text-muted-foreground mr-2">{wp.code}</span>
+                                    <span>{wp.name}</span>
+                                  </div>
+                                  <input type="checkbox" checked={wizardSelectedPackages.has(label)} onChange={() => setWizardSelectedPackages((s: Set<string>) => toggleInSet(s, label))} />
+                                </label>
+                              )
+                            })}
                           </div>
                           {wizardSelectedPackages.size>0 && (
                             <div className="mt-2 flex flex-wrap gap-2">
@@ -1346,7 +1357,7 @@ export default function ITTManagerPage({
                             }) : base
                             const list = filtered.length > 0 ? filtered : base
                             return list.map((s: any) => (
-                            <label key={s.name} className="group flex items-center justify-between gap-3 text-sm p-3 hover:bg-accent hover:text-accent-foreground transition-colors">
+                            <label key={s.name} className={`group flex items-center justify-between gap-3 text-sm p-3 transition-colors ${wizardSelectedSuppliers.has(s.name) ? 'bg-primary/10 text-foreground' : 'hover:bg-accent hover:text-accent-foreground'}`}>
                               <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-full bg-neutral-200 text-neutral-700 flex items-center justify-center text-xs font-semibold">
                                   {s.name.split(' ').map((w: string) => w[0]).slice(0,2).join('')}
@@ -1371,24 +1382,27 @@ export default function ITTManagerPage({
 
                   {wizardStep === 3 && (
                     <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Button variant="outline" size="sm" onClick={() => setWizardStep(2)}>Back</Button>
+                      </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-4 bg-white rounded-lg border">
+                        <div className="p-4 bg-card rounded-lg border border-border">
                           <div className="text-sm font-semibold mb-2">Project</div>
                           <div className="text-sm text-foreground">{ittFormData.project || '—'}</div>
                         </div>
-                        <div className="p-4 bg-white rounded-lg border">
+                        <div className="p-4 bg-card rounded-lg border border-border">
                           <div className="text-sm font-semibold mb-2">Categories</div>
                           {wizardSelectedCategories.size > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {Array.from(wizardSelectedCategories).map((c: string) => (
-                                <span key={c} className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">{c}</span>
+                                <span key={c} className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary border border-border/50">{c}</span>
                               ))}
                             </div>
                           ) : (
                             <div className="text-sm text-neutral-500">—</div>
                           )}
                         </div>
-                        <div className="p-4 bg-white rounded-lg border">
+                        <div className="p-4 bg-card rounded-lg border border-border">
                           <div className="text-sm font-semibold mb-2">Work Packages</div>
                           {wizardSelectedPackages.size > 0 ? (
                             <div className="flex flex-wrap gap-2">
@@ -1400,19 +1414,19 @@ export default function ITTManagerPage({
                             <div className="text-sm text-neutral-500">—</div>
                           )}
                         </div>
-                        <div className="p-4 bg-white rounded-lg border">
+                        <div className="p-4 bg-card rounded-lg border border-border">
                           <div className="text-sm font-semibold mb-2">Suppliers</div>
                           {wizardSelectedSuppliers.size > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {Array.from(wizardSelectedSuppliers).map((s: string) => (
-                                <span key={s} className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">{s}</span>
+                                <span key={s} className="px-2 py-1 text-xs rounded-full bg-green-500/10 text-green-400 border border-green-500/20">{s}</span>
                               ))}
                             </div>
                           ) : (
                             <div className="text-sm text-neutral-500">—</div>
                           )}
                         </div>
-                        <div className="md:col-span-2 p-4 bg-white rounded-lg border">
+                        <div className="md:col-span-2 p-4 bg-card rounded-lg border border-border">
                           <div className="text-sm font-semibold mb-2">Description</div>
                           <div className="text-sm whitespace-pre-wrap text-foreground">{wizardDesc || '—'}</div>
                         </div>
@@ -1425,100 +1439,151 @@ export default function ITTManagerPage({
                     const suppliersAll = constants.supplierPerformanceData as any[]
                     const supplierObjs = suppliersAll.filter(s => wizardSelectedSuppliers.has(s.name))
                     const recipients = supplierObjs.map(s => (s.contactEmail || s.contact || '')).filter((e: string) => !!e)
-                    const allRecipients = Array.from(new Set([...recipients, ...additionalRecipients.filter((e) => !!e)]))
+                    const toRecipients = Array.from(new Set([...recipients, ...toManualRecipients]))
+                    const ccRecipients = Array.from(new Set(ccManualRecipients))
 
                     return (
                       <div className="h-full flex flex-col">
+                        {/* Review Summary (compact, like Tender final page) */}
+                        <div className="mb-4 space-y-3">
+                          <div className="p-3 bg-card rounded-lg border border-border">
+                            <h3 className="text-base md:text-lg font-bold text-foreground flex items-center gap-2">📝 Review & Send</h3>
+                            <p className="text-xs md:text-sm text-muted-foreground">Quick summary before sending</p>
+                          </div>
+                          <div className="bg-card border border-border rounded-lg p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <div className="text-xs font-semibold text-muted-foreground uppercase">Project</div>
+                                <div className="text-sm font-bold text-foreground">{ittFormData.project || '—'}</div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="text-xs font-semibold text-muted-foreground uppercase">Suppliers Selected</div>
+                                <div className="text-sm font-bold text-foreground">{wizardSelectedSuppliers.size}</div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="text-xs font-semibold text-muted-foreground uppercase">To Recipients</div>
+                                <div className="text-sm font-bold text-foreground">{toRecipients.length}</div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="text-xs font-semibold text-muted-foreground uppercase">Cc Recipients</div>
+                                <div className="text-sm font-bold text-foreground">{ccRecipients.length}</div>
+                              </div>
+                            </div>
+                            {wizardSelectedCategories.size > 0 && (
+                              <div className="mt-3">
+                                <div className="text-xs font-semibold text-muted-foreground uppercase">Categories</div>
+                                <div className="mt-1 flex flex-wrap gap-2">
+                                  {Array.from(wizardSelectedCategories).map((c: string) => (
+                                    <span key={c} className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary border border-border/50">{c}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {wizardSelectedPackages.size > 0 && (
+                              <div className="mt-3">
+                                <div className="text-xs font-semibold text-muted-foreground uppercase">Work Packages</div>
+                                <div className="mt-1 flex flex-wrap gap-2 max-h-24 overflow-auto">
+                                  {Array.from(wizardSelectedPackages).map((p: string) => (
+                                    <span key={p} className="px-2 py-1 text-xs rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border">{p}</span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                         {/* Email Composer */}
                         <div className="flex-1 w-full mx-auto">
-                          <div className="bg-white rounded-2xl shadow-lg border p-4 space-y-4 h-full">
+                          <div className="bg-card rounded-2xl border border-border p-4 flex flex-col gap-4 h-full">
+                            {/* Back button moved to footer for consistency */}
                             {/* To Field */}
-                            <div className="space-y-1">
-                              <label className="text-sm font-medium text-gray-700">
+                            {/* To */}
+                            <div className="space-y-2 md:space-y-0 md:flex md:items-start md:gap-3">
+                              <label className="text-sm font-medium text-foreground md:w-36 md:pt-2">
                                 To <span className="text-red-500">*</span>
                               </label>
-                              <div className="flex flex-wrap gap-1 p-2 border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-muted-foreground/20 focus-within:border-muted-foreground/20">
-                                {allRecipients.map((email, index) => (
-                                  <div key={index} className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs">
+                              <div className="flex-1 flex flex-wrap gap-1 p-2 border border-border rounded-xl focus-within:ring-2 focus-within:ring-muted-foreground/20 focus-within:border-muted-foreground/20 max-h-24 overflow-auto">
+                                {toRecipients.map((email, index) => (
+                                  <div key={index} className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs border border-primary/30">
                                     <span>{email}</span>
                                     <button
                                       type="button"
-                                      onClick={() => setAdditionalRecipients(prev => prev.filter((_, i) => i !== index))}
-                                      className="hover:bg-blue-100 rounded-full p-0.5"
+                                      onClick={() => removeManualRecipient(email, 'to')}
+                                      className="hover:bg-primary/20 rounded-full p-0.5"
                                     >
                                       <X className="w-2.5 h-2.5" />
                                     </button>
                                   </div>
                                 ))}
-                                {showCc && additionalRecipients.map((email, index) => (
-                                  <div key={`cc-${index}`} className="flex items-center gap-1 bg-gray-50 text-gray-700 px-2 py-0.5 rounded-full text-xs">
-                                    <span>{email}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeManualRecipient(email)}
-                                      className="hover:bg-gray-100 rounded-full p-0.5"
-                                    >
-                                      <X className="w-2.5 h-2.5" />
-                                    </button>
-                                  </div>
-                                ))}
+                                <input
+                                  type="email"
+                                  value={newToRecipient}
+                                  onChange={(e) => setNewToRecipient(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ',') {
+                                      e.preventDefault()
+                                      addManualRecipient(newToRecipient, 'to')
+                                    }
+                                  }}
+                                  placeholder="Type an email and press Enter"
+                                  className="min-w-[220px] flex-1 px-1 py-0.5 bg-transparent outline-none text-sm text-foreground placeholder-muted-foreground"
+                                />
                               </div>
                               {errors.to && <p className="text-xs text-red-500">{errors.to}</p>}
                             </div>
 
                             {/* Cc Field */}
-                            <div className="space-y-1">
+                            <div className="space-y-1 md:space-y-0 md:flex md:items-center md:gap-3">
                               {!showCc ? (
                                 <button
                                   type="button"
                                   onClick={() => setShowCc(true)}
-                                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                                  className="text-xs text-primary hover:text-primary/80 underline"
                                 >
                                   + Add Cc
                                 </button>
                               ) : (
-                                <div className="space-y-1">
-                                  <label className="text-sm font-medium text-gray-700">Cc</label>
-                                  <div className="flex gap-2">
+                                <>
+                                  <label className="text-sm font-medium text-foreground md:w-36">Cc</label>
+                                  <div className="flex-1 flex gap-2">
                                     <input
                                       type="email"
-                                      value={newRecipient}
-                                      onChange={(e) => setNewRecipient(e.target.value)}
+                                      value={newCcRecipient}
+                                      onChange={(e) => setNewCcRecipient(e.target.value)}
                                       onKeyDown={(e) => {
                                         if (e.key === 'Enter' || e.key === ',') {
                                           e.preventDefault()
-                                          addManualRecipient(newRecipient)
+                                          addManualRecipient(newCcRecipient, 'cc')
                                         }
                                       }}
                                       placeholder="Enter email address"
-                                      className="flex-1 px-2 py-1 border border-gray-200 rounded-lg focus:ring-2 focus:ring-muted-foreground/20 focus:border-muted-foreground/20 text-sm"
+                                      className="flex-1 px-2 py-1 border border-border rounded-lg focus:ring-2 focus:ring-muted-foreground/20 focus:border-muted-foreground/20 text-sm bg-background/50 text-foreground"
                                     />
                                     <Button
                                       type="button"
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => addManualRecipient(newRecipient)}
+                                      onClick={() => addManualRecipient(newCcRecipient, 'cc')}
                                       className="px-2 py-1 h-auto"
                                     >
                                       <Plus className="w-3 h-3" />
                                     </Button>
                                   </div>
-                                </div>
+                                </>
                               )}
                             </div>
 
-                            {/* Subject Field with Attach Button */}
-                            <div className="space-y-1">
-                              <label className="text-sm font-medium text-gray-700">
+                            {/* Subject + Attachment */}
+                            <div className="space-y-1 md:space-y-0 md:flex md:items-center md:gap-3">
+                              <label className="text-sm font-medium text-foreground md:w-36">
                                 Subject <span className="text-red-500">*</span>
                               </label>
-                              <div className="flex gap-2">
+                              <div className="flex-1 flex gap-2 items-center flex-wrap">
                                 <input
                                   type="text"
                                   value={emailSubject}
                                   onChange={(e) => setEmailSubject(e.target.value)}
                                   placeholder="Enter subject"
-                                  className="flex-1 px-2 py-1 border border-gray-200 rounded-lg focus:ring-2 focus:ring-muted-foreground/20 focus:border-muted-foreground/20 text-sm"
+                                  className="flex-1 px-2 py-1 border border-border rounded-lg focus:ring-2 focus:ring-muted-foreground/20 focus:border-muted-foreground/20 text-sm bg-background/50 text-foreground"
                                   aria-invalid={!!errors.subject}
                                 />
                                 <input
@@ -1537,31 +1602,32 @@ export default function ITTManagerPage({
                                   className="px-2 py-1 h-auto"
                                 >
                                   <Paperclip className="w-3 h-3" />
+                                  Attach
                                 </Button>
                               </div>
-                              {errors.subject && <p className="text-xs text-red-500">{errors.subject}</p>}
+                              {errors.subject && <p className="text-xs text-red-500 md:ml-36">{errors.subject}</p>}
                             </div>
 
                             {/* Attachments */}
                             {attachments.length > 0 && (
                               <div className="space-y-1">
-                                <label className="text-sm font-medium text-gray-700">Attachments</label>
+                                <label className="text-sm font-medium text-foreground">Attachments</label>
                                 <div className="flex flex-wrap gap-1">
                                   {attachments.map((file, index) => (
-                                    <div key={index} className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-md px-2 py-1 text-xs">
-                                      <FileText className="w-3 h-3 text-gray-500" />
-                                      <span className="text-gray-700" title={file.name}>
+                                    <div key={index} className="flex items-center gap-1 bg-muted border border-border rounded-md px-2 py-1 text-xs">
+                                      <FileText className="w-3 h-3 text-muted-foreground" />
+                                      <span className="text-foreground" title={file.name}>
                                         {truncateFileName(file.name, 15)}
                                       </span>
-                                      <span className="text-gray-500 text-xs">
+                                      <span className="text-muted-foreground text-xs">
                                         {formatFileSize(file.size)}
                                       </span>
                                       <button
                                         type="button"
                                         onClick={() => removeAttachment(index)}
-                                        className="hover:bg-gray-200 rounded-full p-0.5"
+                                        className="hover:bg-accent rounded-full p-0.5"
                                       >
-                                        <X className="w-2.5 h-2.5 text-gray-500" />
+                                        <X className="w-2.5 h-2.5 text-muted-foreground" />
                                       </button>
                                     </div>
                                   ))}
@@ -1571,12 +1637,12 @@ export default function ITTManagerPage({
 
                             {/* Body Field */}
                             <div className="space-y-1 flex-1">
-                              <label className="text-sm font-medium text-gray-700">Message</label>
+                              <label className="text-sm font-medium text-foreground">Message</label>
                               <div
                                 contentEditable
                                 ref={emailBodyRef}
                                 onInput={(e) => setEmailHtml(e.currentTarget.innerHTML)}
-                                className="min-h-[120px] max-h-[200px] px-2 py-1 border border-gray-200 rounded-lg focus:ring-2 focus:ring-muted-foreground/20 focus:border-muted-foreground/20 text-sm resize-none overflow-y-auto"
+                                className="h-[40vh] px-2 py-1 border border-border rounded-lg focus:ring-2 focus:ring-muted-foreground/20 focus:border-muted-foreground/20 text-sm overflow-auto bg-background/50 text-foreground"
                                 style={{ whiteSpace: 'pre-wrap' }}
                                 dangerouslySetInnerHTML={{ __html: emailHtml }}
                               />
@@ -1584,19 +1650,19 @@ export default function ITTManagerPage({
 
                             {/* Package Information Link */}
                             <div className="space-y-1">
-                              <label className="text-sm font-medium text-gray-700">Package Information Link</label>
+                              <label className="text-sm font-medium text-foreground">Package Information Link</label>
                               <input
                                 type="url"
                                 value={packageInfoLink}
                                 onChange={(e) => setPackageInfoLink(e.target.value)}
                                 placeholder="Enter package information URL"
-                                className="w-full px-2 py-1 border border-gray-200 rounded-lg focus:ring-2 focus:ring-muted-foreground/20 focus:border-muted-foreground/20 text-sm"
+                                className="w-full px-2 py-1 border border-border rounded-lg focus:ring-2 focus:ring-muted-foreground/20 focus:border-muted-foreground/20 text-sm bg-background/50 text-foreground"
                               />
                             </div>
 
                             {/* Download Actions */}
-                            <div className="space-y-1">
-                              <label className="text-sm font-medium text-gray-700">Email Actions</label>
+                            <div className="space-y-1 mt-auto">
+                              <label className="text-sm font-medium text-foreground">Email Actions</label>
                               <div className="flex gap-2">
                                 <Button
                                   variant="outline"
@@ -1607,7 +1673,7 @@ export default function ITTManagerPage({
                                     const suppliersAll = constants.supplierPerformanceData as any[]
                                     const supplierObjs = suppliersAll.filter(s => wizardSelectedSuppliers.has(s.name))
                                     const recipients = supplierObjs.map(s => (s.contactEmail || s.contact || '')).filter((e: string) => !!e)
-                                    const allRecipients = Array.from(new Set([...recipients, ...additionalRecipients.filter((e) => !!e)]))
+                                    const allRecipients = Array.from(new Set([...recipients, ...toManualRecipients.filter((e: string) => !!e)]))
 
                                     // Build the HTML content with proper structure
                                     const htmlContent = `
@@ -1710,7 +1776,7 @@ export default function ITTManagerPage({
                                     const suppliersAll = constants.supplierPerformanceData as any[]
                                     const supplierObjs = suppliersAll.filter(s => wizardSelectedSuppliers.has(s.name))
                                     const recipients = supplierObjs.map(s => (s.contactEmail || s.contact || '')).filter((e: string) => !!e)
-                                    const allRecipients = Array.from(new Set([...recipients, ...additionalRecipients.filter((e) => !!e)]))
+                                    const allRecipients = Array.from(new Set([...recipients, ...toManualRecipients.filter((e: string) => !!e)]))
 
                                     let body = emailHtml ? stripHtml(emailHtml) : (emailBody || '')
                                     if (packageInfoLink && !/package information:/i.test(body)) {
@@ -1778,6 +1844,12 @@ export default function ITTManagerPage({
                       >
                         <Save className="w-4 h-4 mr-2" />
                         Save Draft
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setWizardStep(3)}
+                      >
+                        Back
                       </Button>
                       <Button
                         onClick={handleSend}
