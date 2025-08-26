@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from "react"
+﻿import { useEffect, useRef, useState, useMemo } from "react"
 import { Plus, BarChart3, FileText } from "lucide-react"
 import { Button } from "../ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog"
@@ -6,6 +6,7 @@ import { Input } from "../ui/input"
 import { Textarea } from "../ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
+import { Badge } from "../ui/badge"
 import { ProjectFormData, TenderDraft } from "../../lib/types"
 import { projects, regionData } from "../../lib/constants"
 
@@ -57,18 +58,62 @@ function CreatableInput({ value, onChange, placeholder, suggestions }: { value: 
 }
 
 // Working World Map Canvas Component (from WorldMapPage)
-function WorldMapCanvas() {
+function WorldMapCanvas({ existingProjects, userProjects, setSelectedProject, setShowProjectModal, setSelectedMapCountry, setIsCountryModalOpen }: { 
+  existingProjects: any[], 
+  userProjects?: any[],
+  setSelectedProject: (project: any) => void,
+  setShowProjectModal: (show: boolean) => void,
+  setSelectedMapCountry: (country: string) => void,
+  setIsCountryModalOpen: (open: boolean) => void
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedCountry, setSelectedCountry] = useState('')
   const [countryData, setCountryData] = useState<any>(null)
   const [is3D, setIs3D] = useState(false)
+  const [isContainerReady, setIsContainerReady] = useState(false)
   const chartRef = useRef<any>(null)
   const lastTooltipRef = useRef<{ text: string; ts: number } | null>(null)
   const lastDownRef = useRef<{ x: number; y: number; ts: number } | null>(null)
   const justOpenedAtRef = useRef<number>(0)
   const isDraggingRef = useRef<boolean>(false)
+  // NEW: track hovered country + timestamp
+  const hoveredCountryRef = useRef<string>("")
+  const lastHoverTsRef = useRef<number>(0)
+  const [hoveredName, setHoveredName] = useState<string>("")
+
+  // Country info function moved here
+  const getCountryInfo = (country: string) => {
+    const countryData: { [key: string]: { flag: string; region: string; emoji: string } } = {
+      "United States": { flag: "🇺🇸", region: "North America", emoji: "🏢" },
+      "United Kingdom": { flag: "🇬🇧", region: "Europe", emoji: "🏰" },
+      "Germany": { flag: "🇩🇪", region: "Europe", emoji: "🏭" },
+      "France": { flag: "🇫🇷", region: "Europe", emoji: "🗼" },
+      "Canada": { flag: "🇨🇦", region: "North America", emoji: "🍁" },
+      "Australia": { flag: "🇦🇺", region: "Oceania", emoji: "🦘" },
+      "Japan": { flag: "🇯🇵", region: "Asia", emoji: "🏯" },
+      "China": { flag: "🇨🇳", region: "Asia", emoji: "🏮" },
+      "India": { flag: "🇮🇳", region: "Asia", emoji: "🕌" },
+      "Brazil": { flag: "🇧🇷", region: "South America", emoji: "🌴" },
+      "Netherlands": { flag: "🇳🇱", region: "Europe", emoji: "🌷" },
+      "Spain": { flag: "🇪🇸", region: "Europe", emoji: "🏛️" },
+      "Italy": { flag: "🇮🇹", region: "Europe", emoji: "🍝" },
+      "Switzerland": { flag: "🇨🇭", region: "Europe", emoji: "🏔️" },
+      "Singapore": { flag: "🇸🇬", region: "Asia", emoji: "🏙️" },
+      "United Arab Emirates": { flag: "🇦🇪", region: "Middle East", emoji: "🏗️" },
+      "South Korea": { flag: "🇰🇷", region: "Asia", emoji: "🏢" },
+      "Mexico": { flag: "🇲🇽", region: "North America", emoji: "🌮" },
+      "Norway": { flag: "🇳🇴", region: "Europe", emoji: "⛰️" },
+      "Sweden": { flag: "🇸🇪", region: "Europe", emoji: "🌲" },
+    }
+    
+    return countryData[country] || { 
+      flag: "🌍", 
+      region: "Global", 
+      emoji: "🏗️" 
+    }
+  }
 
   useEffect(() => {
     const fsHandler = () => setIsFullscreen(!!document.fullscreenElement)
@@ -77,30 +122,51 @@ function WorldMapCanvas() {
     return () => document.removeEventListener('fullscreenchange', fsHandler)
   }, [])
 
+  // Effect to mark container as ready when ref is available
   useEffect(() => {
-    if (!containerRef.current) return
-  
+    if (containerRef.current) {
+      setIsContainerReady(true)
+    }
+  }, [])
 
-    // Prepare container
-    containerRef.current.innerHTML = ''
+  useEffect(() => {
+    if (!containerRef.current || !isContainerReady) return
+    
+    const container = containerRef.current
+    
+    // Ensure container has explicit dimensions first
+    container.style.width = '100%'
+    container.style.height = '500px'
+    container.style.minHeight = '500px'
+    container.style.position = 'relative'
+    container.style.overflow = 'hidden'
+    container.style.borderRadius = '12px'
+    container.style.background = '#1a1a1a'
+
+    // Clear and prepare container
+    container.innerHTML = ''
     const wrapper = document.createElement('div')
-    wrapper.style.position = 'relative'
+    wrapper.style.position = 'absolute'
+    wrapper.style.top = '0'
+    wrapper.style.left = '0'
     wrapper.style.width = '100%'
+    wrapper.style.height = '100%'
+    wrapper.style.overflow = 'hidden'
+    
     const setWrapperHeight = () => {
       try {
         if (document.fullscreenElement) {
           wrapper.style.height = `${window.innerHeight}px`
+          container.style.height = `${window.innerHeight}px`
         } else {
           wrapper.style.height = '500px'
+          container.style.height = '500px'
         }
       } catch {
         wrapper.style.height = '500px'
+        container.style.height = '500px'
       }
     }
-    setWrapperHeight()
-    wrapper.style.borderRadius = '12px'
-    wrapper.style.overflow = 'hidden'
-    wrapper.style.background = '#1a1a1a'
 
     // Create chart div with unique ID to avoid conflicts
     const uniqueId = 'chartdiv-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
@@ -108,12 +174,18 @@ function WorldMapCanvas() {
     chartDiv.id = uniqueId
     chartDiv.style.width = '100%'
     chartDiv.style.height = '100%'
+    chartDiv.style.position = 'absolute'
+    chartDiv.style.top = '0'
+    chartDiv.style.left = '0'
     wrapper.appendChild(chartDiv)
-    containerRef.current.appendChild(wrapper)
+    container.appendChild(wrapper)
+    
     const onFsChange = () => { setWrapperHeight(); setIsFullscreen(!!document.fullscreenElement) }
     const onResize = () => setWrapperHeight()
     document.addEventListener('fullscreenchange', onFsChange)
     window.addEventListener('resize', onResize)
+    
+
 
 
 
@@ -140,153 +212,260 @@ function WorldMapCanvas() {
 
     const init = async () => {
       try {
-        await loadScript('https://cdn.amcharts.com/lib/editor/map/5/viewer.js')
+        // Load amCharts 5 core, map, and geodata directly
+        const load = (src: string) => new Promise<void>((resolve, reject) => {
+          const s = document.createElement('script')
+          s.src = src
+          s.async = true
+          s.onload = () => resolve()
+          s.onerror = () => reject(new Error('Failed to load ' + src))
+          document.head.appendChild(s)
+        })
+
+        await load('https://cdn.amcharts.com/lib/5/index.js')
+        await load('https://cdn.amcharts.com/lib/5/map.js')
+        await load('https://cdn.amcharts.com/lib/5/geodata/worldLow.js')
   
         if (disposed) return
         
-        const am5viewer = (window as any).am5viewer
-        
-        
-        if (!am5viewer) throw new Error('am5viewer not available')
-        if (typeof am5viewer.create !== 'function') throw new Error('am5viewer.create is not a function')
+        const am5 = (window as any).am5
+        const am5map = (window as any).am5map
+        const am5geodata_worldLow = (window as any).am5geodata_worldLow
 
-        // Exact configuration from your working HTML
-        const config = {
-          settings: {
-            editor: {
-              themeTags: ['dark'],
-              userData: {
-                projection: is3D ? 'geoOrthographic' : 'geoMercator',
-                geodata: 'worldLow',
-                homeGeoPoint: is3D ? { longitude: 0, latitude: 0 } : undefined,
-              },
-            },
-            'editor.map': {
-              minZoomLevel: 0.8,
-              projection: is3D ? 'geoOrthographic' : 'geoMercator',
-              panX: 'rotateX',
-              ...(is3D
-                ? {
-                    panY: 'rotateY',
-                    rotationX: 0,
-                    rotationY: 0,
-                    homeZoomLevel: 1.0,
-                    homeGeoPoint: { longitude: 0, latitude: 0 },
-                  }
-                : {}),
-              zoomControl: {
-                type: 'ZoomControl',
-                settings: {
-                   visible: false,
-                  position: 'absolute',
-                  layout: { type: 'VerticalLayout' },
-                  themeTags: ['zoomtools'],
-                  layer: 30,
-                },
-              },
-              background: {
-                type: 'Rectangle',
-                settings: {
-                  fill: { type: 'Color', value: '#1a1a1a' },
-                  fillOpacity: 1,
-                  width: 1853,
-                  height: 916,
-                  x: 0,
-                  y: 0,
-                  fillPattern: {
-                    type: 'GrainPattern',
-                    settings: { maxOpacity: 0.08, density: 0.2, colors: [{ type: 'Color', value: '#aaaaaa' }] },
-                  },
-                  isMeasured: false,
-                },
-              },
-              themeTags: ['map'],
-              ...(is3D
-                ? { }
-                : { translateX: 926.5, translateY: 651.6032407502676 }),
-            },
-            'editor.pointTemplate': {
-              toggleKey: 'active',
-              centerX: { type: 'Percent', value: 50 },
-              centerY: { type: 'Percent', value: 50 },
-              tooltipText: '{name}',
-            },
-            'editor.polygonSeries': {
-              valueField: 'value',
-              calculateAggregates: true,
-              id: 'polygonseries',
-              exclude: ['AQ'],
-              geometryField: 'geometry',
-              geometryTypeField: 'geometryType',
-              idField: 'id',
-            },
-          },
-          data: {
-            'editor.polygonSeries': [
-              // Pre-populate with country color data
-              { id: 'GB', name: 'United Kingdom', fill: '#10B981', fillOpacity: 0.8 },
-              { id: 'UK', name: 'United Kingdom', fill: '#10B981', fillOpacity: 0.8 },
-              { id: 'DE', name: 'Germany', fill: '#3B82F6', fillOpacity: 0.8 },
-              { id: 'FR', name: 'France', fill: '#8B5CF6', fillOpacity: 0.8 },
-              { id: 'NL', name: 'Netherlands', fill: '#F59E0B', fillOpacity: 0.8 },
-              { id: 'ES', name: 'Spain', fill: '#EF4444', fillOpacity: 0.8 }
-            ],
-          },
-        } as any
+        if (!am5 || !am5map || !am5geodata_worldLow) throw new Error('amCharts 5 map libs not available')
+        if (!containerRef.current) throw new Error('Container not available')
 
-        // Create the map
+        // Create root directly on the dedicated chart div to avoid overlay/stacking issues
+        const chartContainer = containerRef.current.querySelector('#' + uniqueId) as HTMLDivElement | null
+        const root = am5.Root.new(chartContainer || containerRef.current)
+        chartRef.current = root
 
-        const chart = am5viewer.create(uniqueId, config)
+        // Theme (optional): use animated
+        root.setThemes([
+          am5.Theme.new(root)
+        ])
+        // Ocean/background (black)
+        try {
+          root.set('background', am5.Rectangle.new(root, { fill: am5.color(0x0a0a0a), fillOpacity: 1 }))
+        } catch {}
 
-        chartRef.current = chart
-        
-        if (!chart) {
-          console.error('[Map] Chart creation failed!')
-          return
-        }
-        
-        // Check if chart has root
-
-        
-        // Wait for chart to be ready
-        if (chart.root) {
-          chart.root.events.once('frameended', () => {
-            
+        // Create the map chart
+        const chart = root.container.children.push(
+          am5map.MapChart.new(root, {
+            panX: is3D ? 'rotateX' : 'translateX',
+            panY: is3D ? 'rotateY' : 'translateY',
+            wheelX: 'zoomX',
+            wheelY: 'zoomY',
+            projection: is3D ? am5map.geoOrthographic() : am5map.geoMercator(),
+            pinchZoom: true
           })
+        )
+        // SIMPLE: Just resize and let amCharts handle the rest
+        root.resize()
+        // Enable built-in wheel zoom directly on chart
+        try { 
+          chart.set('wheelX', 'zoomX')
+          chart.set('wheelY', 'zoomY')
+          chart.set('pinchZoom', true)
+        } catch {}
+
+        // Handle wheel zoom manually while preventing page scroll (like Google Maps)
+        try {
+          const mapContainer = containerRef.current
+          if (mapContainer) {
+            const handleWheelZoom = (e: WheelEvent) => {
+              e.preventDefault()
+              e.stopPropagation()
+              
+              // Manual zoom handling
+              try {
+                const zoomDirection = e.deltaY > 0 ? -1 : 1
+                const zoomFactor = zoomDirection > 0 ? 1.2 : 0.8
+                
+                // Get current zoom level from chart
+                const currentZoom = chart.get('zoomLevel') || 1
+                const newZoom = Math.max(0.5, Math.min(32, currentZoom * zoomFactor))
+                
+                // Apply zoom to chart
+                chart.set('zoomLevel', newZoom)
+              } catch (zoomError) {
+                console.log('Zoom error:', zoomError)
+              }
+            }
+            
+            mapContainer.addEventListener('wheel', handleWheelZoom, { passive: false })
+            root.events.on('dispose', () => {
+              try { mapContainer.removeEventListener('wheel', handleWheelZoom as any) } catch {}
+            })
+          }
+        } catch {}
+
+        // Force render when container size becomes available
+        try {
+          const targetEl = containerRef.current
+          if (targetEl && 'ResizeObserver' in window) {
+            const ro = new (window as any).ResizeObserver(() => {
+              try { root.resize() } catch {}
+            })
+            ro.observe(targetEl)
+            root.events.on('dispose', () => { try { ro.disconnect() } catch {} })
+          }
+        } catch {}
+        // Zoom controls (match previous UX)
+        const zoomControl = am5map.ZoomControl.new(root, {})
+        chart.set('zoomControl', zoomControl)
+        chart.zoomControl?.set('opacity', 0.9)
+        chart.zoomControl?.set('x', am5.p100)
+        chart.zoomControl?.set('centerX', am5.p100)
+
+        // Create polygon series
+        const polygonSeries = chart.series.push(
+          am5map.MapPolygonSeries.new(root, {
+            geoJSON: am5geodata_worldLow,
+            valueField: 'value'
+          })
+        )
+
+        // Optional graticule for 3D to enhance globe look
+        if (is3D) {
+          try {
+            const graticule = chart.series.push(
+              am5map.GraticuleSeries.new(root, { step: 20 })
+            )
+            graticule.mapLines.template.setAll({ stroke: am5.color(0x3f3f46), strokeOpacity: 0.2 })
+          } catch {}
         }
 
-
-        
-        // Set up click handlers (simplified)
-        setTimeout(() => {
-          const container = document.getElementById(uniqueId)
-          if (container) {
-            container.addEventListener('click', (e) => {
-              const target = e.target as any
-              if (target?.tagName === 'path') {
-                const title = target.querySelector('title')?.textContent ||
-                            target.getAttribute('aria-label') ||
-                            'Unknown Country'
-                setSelectedCountry(title)
-                setCountryData({ mode: is3D ? '3D' : '2D' })
-                setIsModalOpen(true)
+        // Get countries that have projects - include both existing projects and user projects
+        const getCountriesWithProjects = () => {
+          const countriesWithProjects = new Set<string>()
+          
+          // Map project locations to country names
+          const mapToCountry: Record<string, string> = {
+            'UK': 'United Kingdom',
+            'USA': 'United States', 
+            'United States': 'United States',
+            'United Kingdom': 'United Kingdom',
+            'Germany': 'Germany',
+            'France': 'France',
+            'Netherlands': 'Netherlands',
+            'Amsterdam': 'Netherlands',
+            'London': 'United Kingdom',
+            'Berlin': 'Germany',
+            'Paris': 'France'
+          }
+          
+          // Process existing projects
+          existingProjects.forEach((project: any) => {
+            // Check project country and location fields
+            if (project.country) {
+              const countryName: string = mapToCountry[project.country] || project.country
+              countriesWithProjects.add(countryName)
+            }
+            if (project.location) {
+              Object.keys(mapToCountry).forEach((key: string) => {
+                if (project.location.includes(key)) {
+                  countriesWithProjects.add(mapToCountry[key])
+                }
+              })
+            }
+          })
+          
+          // Process user projects (new tenders/projects)
+          if (userProjects) {
+            userProjects.forEach((project: any) => {
+              if (project.country) {
+                const countryName: string = mapToCountry[project.country] || project.country
+                countriesWithProjects.add(countryName)
+              }
+              if (project.location) {
+                Object.keys(mapToCountry).forEach((key: string) => {
+                  if (project.location && project.location.includes(key)) {
+                    countriesWithProjects.add(mapToCountry[key])
+                  }
+                })
               }
             })
           }
-        }, 1000)
+          
+          return countriesWithProjects
+        }
+        
+        const countriesWithProjects = getCountriesWithProjects()
+        
+        // Tooltip and interactivity
+        polygonSeries.mapPolygons.template.setAll({
+          tooltipText: '{name}',
+          interactive: true,
+          strokeOpacity: 0.9,
+          strokeWidth: 1.2,
+          stroke: am5.color(0x6b7280), // grey border
+          fillOpacity: 1,
+          fill: am5.color(0x262626) // default land grey
+        })
+        
+        // Highlight countries with projects
+        polygonSeries.mapPolygons.template.adapters.add('fill', (fill: any, target: any) => {
+          const dataItem = target.dataItem
+          const countryName = dataItem?.get?.('name') || dataItem?.dataContext?.name
+          if (countryName && countriesWithProjects.has(countryName)) {
+            return am5.color(0x3b82f6) // blue highlight for countries with projects
+          }
+          return am5.color(0x262626) // default grey
+        })
+
+        // Hover state
+        polygonSeries.mapPolygons.template.states.create('hover', {
+          fill: am5.color(0x9ca3af) // light grey hover
+        })
+
+        // Click to zoom and open modal for the selected country
+        polygonSeries.mapPolygons.template.events.on('click', (ev: any) => {
+          const dataItem = ev?.target?.dataItem
+          if (!dataItem) return
+          try {
+            // Smooth zoom to country
+            polygonSeries.zoomToDataItem(dataItem)
+          } catch {}
+          // Determine country name and open modal
+          try {
+            const name = dataItem.get?.('name') || dataItem.dataContext?.name
+            if (name) {
+              setSelectedMapCountry(name)
+              setIsCountryModalOpen(true)
+            }
+          } catch {}
+        })
+
+
+
       } catch (err) {
         console.error(err)
       }
     }
 
-    init()
+    // Wait for container to be properly sized, then initialize immediately
+    const initializeMap = async () => {
+      // Ensure container is ready
+      if (container.offsetHeight === 0) {
+        container.style.height = '500px'
+        container.style.display = 'block'
+      }
+      
+      await init()
+    }
+    
+    // Initialize immediately after DOM setup
+    setTimeout(() => {
+      initializeMap()
+    }, 0)
 
     return () => {
       disposed = true
       try {
-        const c = chartRef.current as any
-        if (c && typeof c.dispose === 'function') {
-          c.dispose()
+        const root = chartRef.current as any
+        if (root && typeof root.dispose === 'function') {
+          root.dispose()
         }
       } catch {}
       chartRef.current = null
@@ -294,11 +473,72 @@ function WorldMapCanvas() {
       window.removeEventListener('resize', onResize)
       if (containerRef.current) containerRef.current.innerHTML = ''
     }
-  }, [is3D])
+  }, [is3D, isContainerReady, userProjects, existingProjects])
+
+  useEffect(() => {
+    // Global pointerup (capture) – opens only when a fresh tooltip name is present and click is inside map
+    const onDocPointerUp = (ev: MouseEvent) => {
+      if (!containerRef.current) return
+      const target = ev.target as Node
+      if (!containerRef.current.contains(target)) return // outside map
+      const now = Date.now()
+      const tipEl = (document.querySelector('.am5-tooltip') as HTMLElement) || (document.querySelector('[role="tooltip"]') as HTMLElement)
+      const liveTip = tipEl?.textContent?.trim() || ""
+      const candidate = liveTip.length > 1 ? liveTip : hoveredCountryRef.current
+      // accept only if recently hovered (avoid stale/opening oceans)
+      if (candidate && now - lastHoverTsRef.current < 800) {
+        setSelectedMapCountry(candidate)
+        setIsCountryModalOpen(true)
+      }
+    }
+    document.addEventListener('pointerup', onDocPointerUp, true)
+    return () => {
+      document.removeEventListener('pointerup', onDocPointerUp, true)
+    }
+  }, [])
 
   return (
-    <div className="relative" style={{ height: isFullscreen ? '100vh' : '500px', backgroundColor: '#0a1426' }}>
-      <div ref={containerRef} className="w-full h-full" />
+    <div 
+      className="relative z-[10] overflow-hidden" 
+      style={{ height: isFullscreen ? '100vh' : '500px', backgroundColor: '#0a1426' }}
+      onMouseMove={(e) => {
+        const target = e.target as any
+        if (target && (target.tagName === 'path' || target.tagName === 'g' || target.tagName === 'circle')) {
+          const tooltip = (document.querySelector('[role="tooltip"]') as HTMLElement)?.textContent ||
+                          (document.querySelector('.am5-tooltip') as HTMLElement)?.textContent ||
+                          (target.querySelector && target.querySelector('title') ? target.querySelector('title')?.textContent : '') ||
+                          target.getAttribute?.('aria-label') ||
+                          target.getAttribute?.('data-name') ||
+                          (target.parentElement ? target.parentElement.querySelector('title')?.textContent : '') ||
+                          ''
+          if (tooltip && tooltip.trim().length > 1) {
+            const name = tooltip.trim()
+            e.currentTarget.setAttribute('data-hovered-country', name)
+            hoveredCountryRef.current = name
+            lastHoverTsRef.current = Date.now()
+            setHoveredName(name)
+          } else {
+            e.currentTarget.removeAttribute('data-hovered-country')
+            hoveredCountryRef.current = ""
+            setHoveredName("")
+          }
+        } else {
+          e.currentTarget.removeAttribute('data-hovered-country')
+          hoveredCountryRef.current = ""
+          setHoveredName("")
+        }
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.removeAttribute('data-hovered-country')
+        hoveredCountryRef.current = ""
+        setHoveredName("")
+      }}
+      onClick={(e) => {
+        // Container click ignored; use the explicit action pill instead
+        return
+      }}
+    >
+      <div ref={containerRef} className="absolute inset-0 w-full h-full z-[50]" />
       
       {/* 3D Toggle Button */}
       <button
@@ -313,30 +553,28 @@ function WorldMapCanvas() {
         {is3D ? '2D' : '3D'}
       </button>
 
-
-      
-      {/* Country Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-background rounded-lg p-6 max-w-md mx-4 transform scale-100 transition-transform duration-300">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold text-gray-800">{selectedCountry}</h3>
+      {/* Hover action pill - appears only when a valid country name is under cursor */}
+      {hoveredName && (
+        <div className="fixed top-4 right-4 z-[99999]">
               <button 
-                onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
-              >
-                ×
+            onClick={() => {
+              setSelectedMapCountry(hoveredName)
+              setIsCountryModalOpen(true)
+            }}
+            className="px-3 py-1.5 text-xs bg-background/95 backdrop-blur border border-border rounded-md shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+            title={`View projects in ${hoveredName}`}
+          >
+            View projects: {hoveredName}
               </button>
             </div>
-            <p className="text-gray-600">Regional information for {selectedCountry}</p>
-            <div className="mt-4">
-              <Button onClick={() => setIsModalOpen(false)} className="w-full">
-                Close
-              </Button>
-            </div>
-          </div>
+      )}
+      {/* Debug hovered name (temporary) */}
+      {hoveredName && (
+        <div className="fixed bottom-4 left-4 z-[99999] text-xs px-2 py-1 bg-black/60 text-white rounded">
+          {hoveredName}
         </div>
       )}
+
     </div>
   )
 }
@@ -411,6 +649,10 @@ export default function ProjectsPage({
   // Project detail modal state
   const [selectedProject, setSelectedProject] = useState<any>(null)
   const [showProjectModal, setShowProjectModal] = useState(false)
+  
+  // Country modal state for map
+  const [isCountryModalOpen, setIsCountryModalOpen] = useState(false)
+  const [selectedMapCountry, setSelectedMapCountry] = useState('')
   
   // Projects state
   const [existingProjects, setExistingProjects] = useState<any[]>([
@@ -1561,7 +1803,18 @@ export default function ProjectsPage({
         
         {/* Working amCharts World Map from WorldMapPage with overlay */}
         <div ref={mapFullscreenRef} className={`relative transition-all duration-300 ease-in-out ${showMap ? 'opacity-100 max-h-screen' : 'opacity-0 max-h-0 overflow-hidden'}`}>
-        <WorldMapCanvas />
+        <WorldMapCanvas 
+          existingProjects={existingProjects} 
+          userProjects={userProjects}
+          setSelectedProject={setSelectedProject}
+          setShowProjectModal={setShowProjectModal}
+          setSelectedMapCountry={setSelectedMapCountry}
+          setIsCountryModalOpen={setIsCountryModalOpen}
+        />
+        
+
+        
+
           {/* Fullscreen button */}
           <button
             className="absolute top-3 right-3 bg-background/90 backdrop-blur px-3 py-1.5 rounded-md border border-border text-xs text-foreground hover:bg-accent hover:text-accent-foreground shadow-sm"
@@ -1639,8 +1892,10 @@ export default function ProjectsPage({
       {/* Existing Projects In Progress */}
                <div className="bg-background/80 backdrop-blur-md rounded-2xl shadow-sm border border-border p-6">
         <div className="flex items-center justify-between mb-6">
-          <div>
+          <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold text-foreground">📋 Tenders in Progress</h2>
+            
+
           </div>
           <Button 
             variant="outline" 
@@ -1915,6 +2170,12 @@ export default function ProjectsPage({
           <DialogHeader className="border-b border-border pb-4">
             <DialogTitle className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
               {selectedProject?.image || '🏗️'} {selectedProject?.name || 'Project Details'}
+              {/* ITT Warning Badge in Header */}
+              {(!selectedProject?.hasITT && !selectedProject?.progress) && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-amber-100 text-amber-800 rounded-full border border-amber-200">
+                  ⚠️ ITT Required
+                </span>
+              )}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-base md:text-lg">
               Comprehensive project information and management
@@ -1989,60 +2250,53 @@ export default function ProjectsPage({
                       </div>
                     </div>
 
-                    {/* Team & Suppliers */}
-                    <div className="space-y-3 lg:space-y-4">
-                      <h4 className="text-base lg:text-lg font-semibold text-foreground">Team & Suppliers</h4>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-muted-foreground">Team Size</span>
-                          <span className="text-sm font-semibold text-foreground">
-                            {Array.isArray(selectedProject.team) ? selectedProject.team.length : selectedProject.team}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-muted-foreground">Suppliers</span>
-                          <span className="text-sm font-semibold text-foreground">{selectedProject.suppliers || 0}</span>
-                        </div>
-                        {selectedProject.issuesReported && (
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-muted-foreground">Issues Reported</span>
-                            <span className="text-sm font-semibold text-foreground">{selectedProject.issuesReported}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* Progress Bar */}
-                    <div className="space-y-4">
-                      <h4 className="text-lg font-semibold text-foreground">Progress Overview</h4>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-foreground">Project Progress</span>
-                          <span className="text-sm font-semibold text-foreground">{selectedProject.progress || 0}%</span>
-                        </div>
-                        <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
-                            style={{ width: `${selectedProject.progress || 0}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
 
                 {/* ITT Section */}
-                <div className="bg-card rounded-xl border border-border p-4 lg:p-6 overflow-y-auto">
-                  <h3 className="text-lg lg:text-xl font-bold text-foreground mb-4 lg:mb-6 flex items-center gap-2 border-b border-border pb-3">
-                    📄 ITT
-                  </h3>
-                  <div className="space-y-6">
-                    <div className="text-center py-8">
-                      <div className="text-4xl mb-4">📋</div>
-                      <h4 className="text-lg font-semibold text-foreground mb-2">Invitation to Tender</h4>
-                      <p className="text-muted-foreground text-sm mb-4">Manage tender documents and supplier responses</p>
+                <div className="bg-card rounded-xl border border-border p-4 lg:p-5 overflow-y-auto">
+                  {/* ITT Assignment Alert - Show if project needs ITT */}
+                  {(!selectedProject.hasITT && !selectedProject.progress) && (
+                    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <div className="text-amber-600 mt-0.5">⚠️</div>
+                        <div className="flex-1">
+                          <h5 className="text-sm font-semibold text-amber-800 mb-1">ITT Assignment Required</h5>
+                          <p className="text-xs text-amber-700 mb-2">This project needs an Invitation to Tender to proceed with supplier selection.</p>
+                          <Button 
+                            size="sm" 
+                            className="h-7 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                            onClick={() => {
+                              setIttFormData && setIttFormData((prev: any) => ({ 
+                                ...prev, 
+                                project: selectedProject.name, 
+                                region: (selectedProject.country || '').toLowerCase() 
+                              }))
+                              setActiveTab && setActiveTab('itt-manager')
+                              setShowCreateITT && setShowCreateITT(true)
+                              setShowProjectModal(false)
+                            }}
+                          >
+                            <FileText className="h-3 w-3 mr-1" />
+                            Assign ITT Now
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-start justify-between mb-3 lg:mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="text-xl">📋</div>
+                      <div>
+                        <h4 className="text-base font-semibold text-foreground">Invitation to Tender</h4>
+                        <p className="text-xs text-muted-foreground">Manage tender documents and supplier responses</p>
+                      </div>
+                    </div>
                       <Button 
-                        className="w-full"
+                      size="sm"
+                      className="px-3 py-1.5 text-xs"
                         onClick={() => {
                           setIttFormData && setIttFormData((prev: any) => ({ 
                             ...prev, 
@@ -2054,32 +2308,31 @@ export default function ProjectsPage({
                           setShowProjectModal(false)
                         }}
                       >
-                        <FileText className="h-4 w-4 mr-2" />
-                        Create New ITT
+                      <FileText className="h-3 w-3 mr-1" />
+                      Create ITT
                       </Button>
                     </div>
                     
                     {/* Sample ITT Data */}
-                    <div className="space-y-4">
-                      <h4 className="text-lg font-semibold text-foreground">Recent ITTs</h4>
                       <div className="space-y-3">
+                    <h5 className="text-sm font-semibold text-foreground">Recent ITTs</h5>
+                    <div className="space-y-2">
                         <div className="bg-muted/50 rounded-lg p-3">
-                          <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-1.5">
                             <span className="text-sm font-semibold text-foreground">General Construction</span>
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Active</span>
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Active</span>
                           </div>
                           <div className="text-xs text-muted-foreground">
                             Deadline: {selectedProject.endDate || '2024-12-31'} • 5 responses
                           </div>
                         </div>
                         <div className="bg-muted/50 rounded-lg p-3">
-                          <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-1.5">
                             <span className="text-sm font-semibold text-foreground">Electrical Systems</span>
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Draft</span>
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Draft</span>
                           </div>
                           <div className="text-xs text-muted-foreground">
                             Created: 2024-11-15 • 0 responses
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -2087,45 +2340,45 @@ export default function ProjectsPage({
                 </div>
 
                 {/* SUPPLY CHAIN Section */}
-                <div className="bg-card rounded-xl border border-border p-4 lg:p-6 overflow-y-auto">
-                  <h3 className="text-lg lg:text-xl font-bold text-foreground mb-4 lg:mb-6 flex items-center gap-2 border-b border-border pb-3">
-                    🔗 SUPPLY CHAIN
-                  </h3>
-                  <div className="space-y-6">
-                    <div className="text-center py-8">
-                      <div className="text-4xl mb-4">🏭</div>
-                      <h4 className="text-lg font-semibold text-foreground mb-2">Supply Chain Management</h4>
-                      <p className="text-muted-foreground text-sm mb-4">Track suppliers, materials, and logistics</p>
+                <div className="bg-card rounded-xl border border-border p-4 lg:p-5 overflow-y-auto">
+                  <div className="flex items-start justify-between mb-3 lg:mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="text-xl">🏭</div>
+                      <div>
+                        <h4 className="text-base font-semibold text-foreground">Supply Chain Management</h4>
+                        <p className="text-xs text-muted-foreground">Track suppliers, materials, and logistics</p>
+                      </div>
+                    </div>
                       <Button 
-                        variant="outline"
-                        className="w-full"
+                      size="sm"
+                      className="px-3 py-1.5 text-xs"
                         onClick={() => {
                           setActiveTab && setActiveTab('supply-chain')
                           setShowProjectModal(false)
                         }}
                       >
-                        <BarChart3 className="h-4 w-4 mr-2" />
-                        View Supply Chain
+                      <BarChart3 className="h-3 w-3 mr-1" />
+                      View Chain
                       </Button>
                     </div>
                     
                     {/* Sample Supply Chain Data */}
-                    <div className="space-y-4">
-                      <h4 className="text-lg font-semibold text-foreground">Key Suppliers</h4>
                       <div className="space-y-3">
+                    <h5 className="text-sm font-semibold text-foreground">Key Suppliers</h5>
+                    <div className="space-y-2">
                         <div className="bg-muted/50 rounded-lg p-3">
-                          <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-1.5">
                             <span className="text-sm font-semibold text-foreground">ABC Construction Ltd</span>
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Approved</span>
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Approved</span>
                           </div>
                           <div className="text-xs text-muted-foreground">
                             Materials: Concrete, Steel • Rating: 4.8/5
                           </div>
                         </div>
                         <div className="bg-muted/50 rounded-lg p-3">
-                          <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-1.5">
                             <span className="text-sm font-semibold text-foreground">XYZ Electrical</span>
-                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Pending</span>
+                          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Pending</span>
                           </div>
                           <div className="text-xs text-muted-foreground">
                             Services: Electrical Installation • Rating: 4.2/5
@@ -2135,21 +2388,20 @@ export default function ProjectsPage({
                     </div>
 
                     {/* Materials Overview */}
-                    <div className="space-y-4">
-                      <h4 className="text-lg font-semibold text-foreground">Materials Status</h4>
+                  <div className="mt-4 space-y-3">
+                    <h5 className="text-sm font-semibold text-foreground">Materials Status</h5>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-foreground">Concrete</span>
-                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Delivered</span>
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Delivered</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-foreground">Steel Beams</span>
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">In Transit</span>
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">In Transit</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-foreground">Electrical Equipment</span>
-                          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Ordered</span>
-                        </div>
+                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Ordered</span>
                       </div>
                     </div>
                   </div>
@@ -2161,8 +2413,8 @@ export default function ProjectsPage({
                 <h3 className="text-lg lg:text-xl font-bold text-foreground mb-4 lg:mb-6 flex items-center gap-2 border-b border-border pb-3">
                   📅 TIMELINE
                 </h3>
-                <div className="space-y-6">
-                  {/* Project Timeline */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Column 1: Project Timeline */}
                   <div className="space-y-4">
                     <h4 className="text-lg font-semibold text-foreground">Project Timeline</h4>
                     <div className="space-y-4">
@@ -2223,7 +2475,7 @@ export default function ProjectsPage({
                     </div>
                   </div>
 
-                  {/* Key Milestones */}
+                  {/* Column 2: Key Milestones */}
                   <div className="space-y-4">
                     <h4 className="text-lg font-semibold text-foreground">Key Milestones</h4>
                     <div className="grid grid-cols-2 gap-4">
@@ -2244,7 +2496,7 @@ export default function ProjectsPage({
                     </div>
                   </div>
 
-                  {/* Recent Activities */}
+                  {/* Column 3: Recent Activities */}
                   <div className="space-y-4">
                     <h4 className="text-lg font-semibold text-foreground">Recent Activities</h4>
                     <div className="space-y-3">
@@ -2264,6 +2516,49 @@ export default function ProjectsPage({
                         <span className="text-muted-foreground text-xs">3 days ago</span>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Key Milestones */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-foreground">Key Milestones</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <div className="text-sm font-semibold text-foreground mb-1">Planning Phase</div>
+                    <div className="text-xs text-muted-foreground">Completed: {selectedProject.startDate || '2024-01-15'}</div>
+                    <div className="w-full bg-muted rounded-full h-2 mt-2">
+                      <div className="bg-green-500 h-2 rounded-full" style={{ width: '100%' }}></div>
+                    </div>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <div className="text-sm font-semibold text-foreground mb-1">Construction Phase</div>
+                    <div className="text-xs text-muted-foreground">Progress: {selectedProject.progress || 0}%</div>
+                    <div className="w-full bg-muted rounded-full h-2 mt-2">
+                      <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${selectedProject.progress || 0}%` }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Activities */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-foreground">Recent Activities</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-foreground">Site inspection completed</span>
+                    <span className="text-muted-foreground text-xs">2 hours ago</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-foreground">Material delivery scheduled</span>
+                    <span className="text-muted-foreground text-xs">1 day ago</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                    <span className="text-foreground">Safety review meeting</span>
+                    <span className="text-muted-foreground text-xs">3 days ago</span>
                   </div>
                 </div>
               </div>
@@ -2324,6 +2619,164 @@ export default function ProjectsPage({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Country Projects Modal */}
+      {isCountryModalOpen && selectedMapCountry && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-xl p-6 max-w-4xl w-[90vw] max-h-[80vh] overflow-y-auto mx-4 transform scale-100 transition-transform duration-300 border border-border">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="text-2xl">
+                  {selectedMapCountry === 'United Kingdom' ? '🇬🇧' :
+                   selectedMapCountry === 'Germany' ? '🇩🇪' :
+                   selectedMapCountry === 'France' ? '🇫🇷' :
+                   selectedMapCountry === 'Netherlands' ? '🇳🇱' : '🌍'}
+    </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-foreground">{selectedMapCountry}</h3>
+                  <p className="text-muted-foreground">Projects in Europe</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsCountryModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground text-2xl leading-none p-2 hover:bg-accent rounded-lg transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Country Projects Grid */}
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                  🏗️ Active Projects in {selectedMapCountry}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Combined existing projects and user projects */}
+                  {[...existingProjects, ...(userProjects || [])]
+                    .filter(project => {
+                      const mapToProject: Record<string, string[]> = {
+                        'United Kingdom': ['UK', 'United Kingdom'],
+                        'United States': ['USA', 'United States'],
+                        'Germany': ['Germany'],
+                        'France': ['France'],
+                        'Netherlands': ['Netherlands']
+                      }
+                      
+                      const projectCountries: string[] = mapToProject[selectedMapCountry] || [selectedMapCountry]
+                      return projectCountries.some((country: string) => 
+                        project.country === country || 
+                        project.location?.includes(country) ||
+                        project.location?.includes(selectedMapCountry)
+                      )
+                    })
+                    .map((project) => (
+                      <Card 
+                        key={project.id} 
+                        className="hover:shadow-md transition-shadow cursor-pointer hover:bg-accent/5"
+                        onClick={() => {
+                          setSelectedProject(project)
+                          setShowProjectModal(true)
+                          setIsCountryModalOpen(false)
+                        }}
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="text-xl">{project.image || '🏗️'}</div>
+                              <div>
+                                <CardTitle className="text-sm leading-tight">{project.name}</CardTitle>
+                                <CardDescription className="text-xs">{project.location || project.country}</CardDescription>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              {project.score ? (
+                                <div className={`text-xs font-medium ${
+                                  project.score >= 90 ? 'text-green-600' : 
+                                  project.score >= 80 ? 'text-blue-600' : 
+                                  project.score >= 70 ? 'text-yellow-600' : 'text-red-600'
+                                }`}>
+                                  {project.score}/100
+                                </div>
+                              ) : (
+                                <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                                  New
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          {project.progress !== undefined && (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs">Progress</span>
+                                <span className="text-xs font-medium">{project.progress}%</span>
+                              </div>
+                              <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
+                                  style={{ width: `${project.progress}%` }}
+                                />
+                              </div>
+                            </>
+                          )}
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{project.budget || 'Budget TBD'}</span>
+                            {project.status && (
+                              <span className={`px-1.5 py-0.5 rounded-full text-xs ${
+                                project.status === 'On Track' ? 'bg-green-100 text-green-700' :
+                                project.status === 'Ahead' ? 'bg-blue-100 text-blue-700' :
+                                project.status === 'Delayed' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {project.status}
+                              </span>
+                            )}
+                          </div>
+                          {(project.startDate || project.endDate) && (
+                            <div className="text-xs text-muted-foreground">
+                              {project.startDate} → {project.endDate}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                </div>
+                
+                {[...existingProjects, ...(userProjects || [])].filter(project => {
+                  const mapToProject: Record<string, string[]> = {
+                    'United Kingdom': ['UK', 'United Kingdom'],
+                    'United States': ['USA', 'United States'],
+                    'Germany': ['Germany'],
+                    'France': ['France'],
+                    'Netherlands': ['Netherlands']
+                  }
+                  
+                  const projectCountries: string[] = mapToProject[selectedMapCountry] || [selectedMapCountry]
+                  return projectCountries.some((country: string) => 
+                    project.country === country || 
+                    project.location?.includes(country) ||
+                    project.location?.includes(selectedMapCountry)
+                  )
+                }).length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-4">🏗️</div>
+                    <h4 className="text-lg font-semibold text-foreground mb-2">No Active Projects</h4>
+                    <p className="text-muted-foreground text-sm">No projects currently active in {selectedMapCountry}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-6 pt-4 border-t border-border">
+              <Button onClick={() => setIsCountryModalOpen(false)} className="px-6">
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,0 +1,559 @@
+// ===============================================
+// PREP Construction Management System Database Schema
+// Generated from TypeScript interfaces and application logic
+// ===============================================
+
+// ===============================================
+// CORE ENTITIES
+// ===============================================
+
+Table users {
+  id integer [primary key, increment]
+  username varchar [not null, unique]
+  email varchar [unique]
+  password_hash varchar [not null]
+  role varchar [not null, default: 'user'] // admin, manager, user
+  first_name varchar
+  last_name varchar
+  phone varchar
+  company varchar
+  is_active boolean [default: true]
+  last_login_at timestamp
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table countries {
+  id integer [primary key, increment]
+  name varchar [not null, unique]
+  code varchar [not null, unique] // ISO 3166-1 alpha-2
+  flag_url varchar
+  currency_code varchar
+  region varchar // Europe, Americas, Asia, etc.
+  created_at timestamp [default: `now()`]
+}
+
+Table projects {
+  id integer [primary key, increment]
+  name varchar [not null]
+  client_name varchar
+  description text
+  location varchar [not null]
+  latitude decimal
+  longitude decimal
+  country_id integer [not null]
+  start_date date [not null]
+  end_date date [not null]
+  actual_start_date date
+  actual_end_date date
+  progress decimal [default: 0] // 0-100 percentage
+  budget decimal [not null]
+  spent decimal [default: 0]
+  satisfaction decimal // 0-5 rating
+  size varchar [not null] // Small, Medium, Large, Extra Large
+  status varchar [not null] // Planning, Active, On Hold, Completed, Cancelled
+  risk_score decimal [default: 50] // 0-100 risk assessment
+  priority varchar [default: 'Medium'] // Low, Medium, High
+  image_url varchar
+  created_by integer [not null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (country_id) [name: 'idx_projects_country']
+    (status) [name: 'idx_projects_status']
+    (start_date, end_date) [name: 'idx_projects_dates']
+    (created_by) [name: 'idx_projects_creator']
+  }
+}
+
+Table suppliers {
+  id integer [primary key, increment]
+  name varchar [not null, unique]
+  contact_person varchar
+  email varchar [not null]
+  phone varchar
+  website varchar
+  address text
+  country_id integer
+  category varchar [not null] // Electrical, Structural, HVAC, Plumbing, General, etc.
+  score decimal [default: 0] // 0-5 rating
+  projects_completed integer [default: 0]
+  on_time_delivery decimal [default: 0] // percentage
+  cost_per_unit decimal
+  approved boolean [default: false]
+  approval_date date
+  response_time decimal // hours
+  payment_terms varchar
+  tax_id varchar
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+ indexes {
+  (category) [name: 'idx_suppliers_category']
+  (country_id) [name: 'idx_suppliers_country']
+  (approved) [name: 'idx_suppliers_approved']
+  (score) [name: 'idx_suppliers_score']   // removed desc
+}
+}
+
+Table work_packages {
+  id integer [primary key, increment]
+  coins_code varchar [not null, unique] // Standard COINS code like S100A, S101A
+  name varchar [not null]
+  description text
+  category varchar // Structural, Electrical, HVAC, etc.
+  estimated_cost decimal
+  estimated_duration_days integer
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (coins_code) [name: 'idx_work_packages_code']
+    (category) [name: 'idx_work_packages_category']
+  }
+}
+
+Table itts {
+  id integer [primary key, increment]
+  title varchar [not null]
+  description text
+  project_id integer [not null]
+  category varchar [not null] // Electrical, Structural, HVAC, Plumbing, General, etc.
+  scope text
+  status varchar [not null] // Draft, Sent, Replied, Awarded, Closed, Cancelled
+  priority varchar [default: 'Medium'] // Low, Medium, High, Urgent
+  budget decimal [not null]
+  currency_code varchar [default: 'GBP']
+  region varchar [not null] // UK, Germany, France, etc.
+  created_date date [not null]
+  deadline_date date [not null]
+  sent_date timestamp
+  responses_received integer [default: 0]
+  total_suppliers integer [default: 0]
+  awarded_supplier_id integer
+  awarded_amount decimal
+  awarded_date date
+  special_requirements text
+  compliance_requirements json // Array of compliance requirements
+  created_by integer [not null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (project_id) [name: 'idx_itts_project']
+    (status) [name: 'idx_itts_status']
+    (deadline_date) [name: 'idx_itts_deadline']
+    (category) [name: 'idx_itts_category']
+    (created_by) [name: 'idx_itts_creator']
+  }
+}
+
+Table tender_drafts {
+  id integer [primary key, increment]
+  project_id integer [not null]
+  selected_country_id integer [not null]
+  current_step integer [not null, default: 1] // 1-4 step wizard
+  form_data json [not null] // Complete form data as JSON
+  saved_at timestamp [default: `now()`]
+  created_by integer [not null]
+  is_completed boolean [default: false]
+  completed_at timestamp
+
+  indexes {
+    (project_id) [name: 'idx_tender_drafts_project']
+    (created_by) [name: 'idx_tender_drafts_creator']
+    (is_completed) [name: 'idx_tender_drafts_completed']
+  }
+}
+
+// ===============================================
+// WIDGET AND DASHBOARD ENTITIES
+// ===============================================
+
+Table widgets {
+  id integer [primary key, increment]
+  title varchar [not null]
+  description text
+  type varchar // kpi, chart, table, etc.
+  category varchar [not null] // projects, itt, financial, supply, analytics, insights
+  enabled boolean [default: true]
+  size varchar [not null] // small, medium, large, extra-large
+  order_position integer [default: 0]
+  pages json [not null] // Array of page types where widget appears
+  config json // Widget-specific configuration
+  created_by integer
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (category) [name: 'idx_widgets_category']
+    (enabled) [name: 'idx_widgets_enabled']
+  }
+}
+
+Table widget_definitions {
+  id integer [primary key, increment]
+  name varchar [not null]
+  data_source varchar [not null] // projects, itts, suppliers, costs, issues, regionMetrics
+  filters json // Array of filter conditions
+  group_by json // Array of fields to group by
+  metrics json [not null] // Array of metrics to calculate
+  visualization_type varchar [not null] // kpi, bar, line, area, pie, table, progress, card
+  widget_size varchar [not null] // sm, md, lg, xl
+  options json // Chart options, formatting, etc.
+  date_scope varchar [default: 'global'] // global, custom
+  date_range_start date
+  date_range_end date
+  is_template boolean [default: false]
+  created_by integer [not null]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (data_source) [name: 'idx_widget_definitions_source']
+    (visualization_type) [name: 'idx_widget_definitions_viz']
+    (is_template) [name: 'idx_widget_definitions_template']
+  }
+}
+
+// ===============================================
+// ANALYTICS AND REPORTING ENTITIES
+// ===============================================
+
+Table monthly_project_data {
+  id integer [primary key, increment]
+  project_id integer [not null]
+  month date [not null] // First day of the month
+  budget_allocated decimal
+  amount_spent decimal
+  variance decimal
+  projects_count integer [default: 0]
+  satisfaction_avg decimal
+  issues_reported integer [default: 0]
+  rework_cost decimal
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    (project_id) [name: 'idx_monthly_data_project']
+    (month) [name: 'idx_monthly_data_month']
+    (project_id, month) [unique]
+  }
+}
+
+Table insights {
+  id integer [primary key, increment]
+  type varchar [not null] // budget, supplier, itt, project
+  title varchar [not null]
+  description text [not null]
+  severity varchar [not null] // low, medium, high, positive
+  project_id integer
+  itt_id integer
+  supplier_id integer
+  timestamp timestamp [default: `now()`]
+  is_read boolean [default: false]
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    (type) [name: 'idx_insights_type']
+    (severity) [name: 'idx_insights_severity']
+    (project_id) [name: 'idx_insights_project']
+    (is_read) [name: 'idx_insights_read']
+  }
+}
+
+Table itt_deadlines {
+  id integer [primary key, increment]
+  project_id integer [not null]
+  itt_id integer
+  task_name varchar [not null]
+  days_left integer [not null]
+  priority varchar [not null] // Low, Medium, High, Urgent
+  estimated_value decimal
+  suppliers_invited integer [default: 0]
+  responses_received integer [default: 0]
+  status varchar [not null] // Active, Urgent, Overdue, Completed
+  due_date date [not null]
+  completed_date date
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (project_id) [name: 'idx_itt_deadlines_project']
+    (itt_id) [name: 'idx_itt_deadlines_itt']
+    (due_date) [name: 'idx_itt_deadlines_due']
+    (status) [name: 'idx_itt_deadlines_status']
+  }
+}
+
+Table issues {
+  id integer [primary key, increment]
+  title varchar [not null]
+  description text
+  type varchar [not null] // structural, electrical, safety, quality, schedule, budget
+  severity varchar [not null] // low, medium, high, critical
+  status varchar [not null] // open, in_progress, resolved, closed
+  project_id integer [not null]
+  reported_by integer [not null]
+  assigned_to integer
+  supplier_id integer
+  work_package_id integer
+  cost_impact decimal
+  reported_date date [not null]
+  resolved_date date
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (project_id) [name: 'idx_issues_project']
+    (type) [name: 'idx_issues_type']
+    (severity) [name: 'idx_issues_severity']
+    (status) [name: 'idx_issues_status']
+    (reported_by) [name: 'idx_issues_reporter']
+  }
+}
+
+// ===============================================
+// MATERIAL AND INVENTORY ENTITIES
+// ===============================================
+
+Table materials {
+  id integer [primary key, increment]
+  name varchar [not null, unique]
+  description text
+  category varchar [not null] // Steel, Concrete, Electrical, Plumbing, etc.
+  unit varchar [not null] // kg, m2, m3, pieces, etc.
+  unit_cost decimal
+  lead_time_days integer
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (category) [name: 'idx_materials_category']
+    (is_active) [name: 'idx_materials_active']
+  }
+}
+
+Table supplier_materials {
+  id integer [primary key, increment]
+  supplier_id integer [not null]
+  material_id integer [not null]
+  stock_level integer [default: 0]
+  min_stock_level integer [default: 0]
+  max_stock_level integer
+  lead_time_days integer
+  unit_cost decimal
+  is_preferred boolean [default: false]
+  last_updated timestamp [default: `now()`]
+  created_at timestamp [default: `now()`]
+
+  indexes {
+    (supplier_id, material_id) [unique]
+  }
+}
+
+Table certifications {
+  id integer [primary key, increment]
+  name varchar [not null, unique]
+  description text
+  issuing_body varchar
+  validity_period_months integer
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+// ===============================================
+// RELATIONSHIP TABLES (Many-to-Many)
+// ===============================================
+
+Table project_suppliers {
+  id integer [primary key, increment]
+  project_id integer [not null]
+  supplier_id integer [not null]
+  role varchar [not null] // main_contractor, subcontractor, supplier, consultant
+  assigned_date date [not null]
+  completion_date date
+  contract_value decimal
+  performance_rating decimal // 0-5 rating
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (project_id, supplier_id) [unique]
+    (project_id) [name: 'idx_project_suppliers_project']
+    (supplier_id) [name: 'idx_project_suppliers_supplier']
+    (is_active) [name: 'idx_project_suppliers_active']
+  }
+}
+
+Table project_work_packages {
+  id integer [primary key, increment]
+  project_id integer [not null]
+  work_package_id integer [not null]
+  planned_start_date date
+  planned_end_date date
+  actual_start_date date
+  actual_end_date date
+  budget_allocated decimal
+  cost_incurred decimal
+  progress decimal [default: 0] // 0-100
+  status varchar [not null] // Not Started, In Progress, Completed, On Hold
+  assigned_supplier_id integer
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (project_id, work_package_id) [unique]
+    (project_id) [name: 'idx_project_work_packages_project']
+    (status) [name: 'idx_project_work_packages_status']
+  }
+}
+
+Table project_materials {
+  id integer [primary key, increment]
+  project_id integer [not null]
+  material_id integer [not null]
+  work_package_id integer
+  quantity_required decimal [not null]
+  quantity_ordered decimal [default: 0]
+  quantity_delivered decimal [default: 0]
+  unit_cost decimal [not null]
+  supplier_id integer
+  delivery_date date
+  status varchar [default: 'planned'] // planned, ordered, delivered, cancelled
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (project_id) [name: 'idx_project_materials_project']
+    (material_id) [name: 'idx_project_materials_material']
+    (supplier_id) [name: 'idx_project_materials_supplier']
+    (status) [name: 'idx_project_materials_status']
+  }
+}
+
+Table itt_suppliers {
+  id integer [primary key, increment]
+  itt_id integer [not null]
+  supplier_id integer [not null]
+  invitation_sent_date timestamp
+  response_received_date timestamp
+  response_status varchar // pending, responded, declined, no_response
+  proposed_cost decimal
+  proposed_duration_days integer
+  notes text
+  is_awarded boolean [default: false]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (itt_id, supplier_id) [unique]
+    (itt_id) [name: 'idx_itt_suppliers_itt']
+    (supplier_id) [name: 'idx_itt_suppliers_supplier']
+    (response_status) [name: 'idx_itt_suppliers_response']
+    (is_awarded) [name: 'idx_itt_suppliers_awarded']
+  }
+}
+
+Table supplier_certifications {
+  id integer [primary key, increment]
+  supplier_id integer [not null]
+  certification_id integer [not null]
+  issue_date date [not null]
+  expiry_date date
+  certificate_number varchar
+  issuing_body varchar
+  status varchar [default: 'active'] // active, expired, revoked
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (supplier_id, certification_id) [unique]
+    (supplier_id) [name: 'idx_supplier_certifications_supplier']
+    (expiry_date) [name: 'idx_supplier_certifications_expiry']
+    (status) [name: 'idx_supplier_certifications_status']
+  }
+}
+
+Table project_team_members {
+  id integer [primary key, increment]
+  project_id integer [not null]
+  user_id integer [not null]
+  role varchar [not null] // project_manager, engineer, architect, consultant, etc.
+  assigned_date date [not null]
+  end_date date
+  hourly_rate decimal
+  hours_allocated decimal
+  is_active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  indexes {
+    (project_id, user_id) [unique]
+    (project_id) [name: 'idx_project_team_project']
+    (user_id) [name: 'idx_project_team_user']
+    (role) [name: 'idx_project_team_role']
+    (is_active) [name: 'idx_project_team_active']
+  }
+}
+
+// ===============================================
+// FOREIGN KEY RELATIONSHIPS
+// ===============================================
+
+// Core entity relationships
+Ref: projects.country_id > countries.id
+Ref: projects.created_by > users.id
+Ref: suppliers.country_id > countries.id
+Ref: itts.project_id > projects.id
+Ref: itts.created_by > users.id
+Ref: itts.awarded_supplier_id > suppliers.id
+Ref: tender_drafts.project_id > projects.id
+Ref: tender_drafts.selected_country_id > countries.id
+Ref: tender_drafts.created_by > users.id
+
+// Widget relationships
+Ref: widgets.created_by > users.id
+Ref: widget_definitions.created_by > users.id
+
+// Analytics relationships
+Ref: monthly_project_data.project_id > projects.id
+Ref: insights.project_id > projects.id
+Ref: insights.itt_id > itts.id
+Ref: insights.supplier_id > suppliers.id
+Ref: itt_deadlines.project_id > projects.id
+Ref: itt_deadlines.itt_id > itts.id
+Ref: issues.project_id > projects.id
+Ref: issues.reported_by > users.id
+Ref: issues.assigned_to > users.id
+Ref: issues.supplier_id > suppliers.id
+Ref: issues.work_package_id > work_packages.id
+
+// Material relationships
+Ref: supplier_materials.supplier_id > suppliers.id
+Ref: supplier_materials.material_id > materials.id
+
+// Many-to-many relationships
+Ref: project_suppliers.project_id > projects.id
+Ref: project_suppliers.supplier_id > suppliers.id
+Ref: project_work_packages.project_id > projects.id
+Ref: project_work_packages.work_package_id > work_packages.id
+Ref: project_work_packages.assigned_supplier_id > suppliers.id
+Ref: project_materials.project_id > projects.id
+Ref: project_materials.material_id > materials.id
+Ref: project_materials.supplier_id > suppliers.id
+Ref: project_materials.work_package_id > work_packages.id
+Ref: itt_suppliers.itt_id > itts.id
+Ref: itt_suppliers.supplier_id > suppliers.id
+Ref: supplier_certifications.supplier_id > suppliers.id
+Ref: supplier_certifications.certification_id > certifications.id
+Ref: project_team_members.project_id > projects.id
+Ref: project_team_members.user_id > users.id
+
+// ===============================================
+// VIEWS AND COMPUTED TABLES (example SQL, not DBML)
+// ===============================================
